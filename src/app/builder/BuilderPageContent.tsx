@@ -123,14 +123,33 @@ export default function BuilderPageContent() {
     setPortfolios([{ id: newId, name: `Portfolio ${newId}`, rows: [], isExpanded: true }]);
   }, []);
 
-  const handleSignIn = useCallback((username: string, userId: string) => {
+  const handleSignIn = useCallback(async (username: string, userId: string) => {
     setUserAccount({ username, id: userId });
     setShowSignInModal(false);
     
     // Load user's portfolios from database
-    // For now, create a default portfolio
-    const newId = "1";
-    setPortfolios([{ id: newId, name: `Portfolio ${newId}`, rows: [], isExpanded: true }]);
+    try {
+      const response = await fetch(`/api/user/${userId}/portfolios`);
+      if (response.ok) {
+        const userData = await response.json();
+        if (userData.portfolios && userData.portfolios.length > 0) {
+          setPortfolios(userData.portfolios);
+        } else {
+          // Create first portfolio if none exist
+          const newId = "1";
+          setPortfolios([{ id: newId, name: `Portfolio ${newId}`, rows: [], isExpanded: true }]);
+        }
+      } else {
+        // Fallback: create default portfolio
+        const newId = "1";
+        setPortfolios([{ id: newId, name: `Portfolio ${newId}`, rows: [], isExpanded: true }]);
+      }
+    } catch (error) {
+      console.warn('Failed to load portfolios:', error);
+      // Fallback: create default portfolio
+      const newId = "1";
+      setPortfolios([{ id: newId, name: `Portfolio ${newId}`, rows: [], isExpanded: true }]);
+    }
   }, []);
 
   const handleCreatePortfolio = useCallback(() => {
@@ -161,15 +180,37 @@ export default function BuilderPageContent() {
     ));
   }, []);
 
-  const addRow = useCallback((portfolioId: string) => {
+  const addRow = useCallback(async (portfolioId: string) => {
     const mint = extractMintFromInput(currentInput);
     if (!mint) return;
     
+    // Add the token immediately
     setPortfolios((prev) => prev.map((p) => 
       p.id === portfolioId 
         ? { ...p, rows: [...p.rows, { mint }] }
         : p
     ));
+    
+    // Fetch metadata immediately for this specific token
+    try {
+      const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`);
+      const data = await response.json();
+      
+      if (data && data.pairs && data.pairs.length > 0) {
+        const pair = data.pairs[0];
+        setExtraMeta(prev => ({
+          ...prev,
+          [mint]: {
+            symbol: pair.baseToken?.symbol,
+            name: pair.baseToken?.name,
+            logoURI: pair.baseToken?.image,
+          }
+        }));
+      }
+    } catch (error) {
+      console.warn('Failed to fetch immediate metadata:', error);
+    }
+    
     setCurrentInput("");
   }, [currentInput]);
 
@@ -279,6 +320,27 @@ export default function BuilderPageContent() {
     return () => controller.abort();
   }, [portfolios, tokenMeta]);
 
+  // Save portfolios to database when they change
+  useEffect(() => {
+    if (userAccount && portfolios.length > 0) {
+      const savePortfolios = async () => {
+        try {
+          await fetch(`/api/user/${userAccount.id}/portfolios`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ portfolios })
+          });
+        } catch (error) {
+          console.warn('Failed to save portfolios:', error);
+        }
+      };
+      
+      // Debounce saves to avoid too many API calls
+      const timeoutId = setTimeout(savePortfolios, 1000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [portfolios, userAccount]);
+
   // Connect to Pump.fun WebSocket
   useEffect(() => {
     setPumpStatus("connecting");
@@ -355,14 +417,40 @@ export default function BuilderPageContent() {
         {portfolios.length === 0 ? (
           <div className="text-center py-16">
             <div className="mb-8">
-              <h2 className="text-2xl font-semibold text-white mb-4">No portfolios yet</h2>
-              <p className="text-white/60 mb-8">Create your first portfolio to start building and sharing your token collections.</p>
-              <button
-                onClick={handleCreatePortfolio}
-                className="rounded-lg bg-[var(--brand-end)] hover:bg-[var(--brand-start)] px-8 py-4 text-lg font-medium text-white transition-colors"
-              >
-                Create Portfolio
-              </button>
+              <h2 className="text-2xl font-semibold text-white mb-4">
+                {userAccount ? "No portfolios yet" : "Welcome to Portfolio Builder"}
+              </h2>
+              <p className="text-white/60 mb-8">
+                {userAccount 
+                  ? "Create your first portfolio to start building and sharing your token collections."
+                  : "Sign in to access your existing portfolios or create a new account to get started."
+                }
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                {!userAccount ? (
+                  <>
+                    <button
+                      onClick={() => setShowSignInModal(true)}
+                      className="rounded-lg bg-[var(--brand-end)] hover:bg-[var(--brand-start)] px-8 py-4 text-lg font-medium text-white transition-colors"
+                    >
+                      Sign In
+                    </button>
+                    <button
+                      onClick={() => setShowAccountModal(true)}
+                      className="rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 px-8 py-4 text-lg font-medium text-white transition-colors"
+                    >
+                      Create Account
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={handleCreatePortfolio}
+                    className="rounded-lg bg-[var(--brand-end)] hover:bg-[var(--brand-start)] px-8 py-4 text-lg font-medium text-white transition-colors"
+                  >
+                    Create Portfolio
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ) : (

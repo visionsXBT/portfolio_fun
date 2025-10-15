@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
       const user = await createAccount(username, password);
       return NextResponse.json({ 
         success: true, 
-        user: { id: user.id, username: user.username, createdAt: user.createdAt }
+        user: { id: user._id, username: user.username, createdAt: user.createdAt }
       });
     }
 
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       if (user) {
         return NextResponse.json({ 
           success: true, 
-          user: { id: user.id, username: user.username, createdAt: user.createdAt }
+          user: { id: user._id, username: user.username, createdAt: user.createdAt }
         });
       } else {
         return NextResponse.json({ 

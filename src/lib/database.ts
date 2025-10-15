@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { connectToDatabase } from './mongodb';
 
 export interface Portfolio {
   id: string;
@@ -8,36 +9,21 @@ export interface Portfolio {
 }
 
 export interface UserAccount {
-  id: string;
+  _id?: string;
   username: string;
   passwordHash: string;
   createdAt: string;
   portfolios: Portfolio[];
 }
 
-export interface AccountData {
-  users: UserAccount[];
-}
-
-// In-memory database for serverless environment
-let accounts: AccountData = { users: [] };
-
-// Read all accounts
-export function getAccounts(): AccountData {
-  return accounts;
-}
-
-// Save accounts to memory
-export function saveAccounts(data: AccountData): void {
-  accounts = data;
-}
-
 // Create new account
 export async function createAccount(username: string, password: string): Promise<UserAccount> {
-  const data = getAccounts();
+  const db = await connectToDatabase();
+  const users = db.collection<UserAccount>('users');
   
   // Check if username already exists
-  if (data.users.find(user => user.username === username)) {
+  const existingUser = await users.findOne({ username });
+  if (existingUser) {
     throw new Error('Username already exists');
   }
   
@@ -46,24 +32,22 @@ export async function createAccount(username: string, password: string): Promise
   
   // Create new user
   const newUser: UserAccount = {
-    id: Date.now().toString(),
     username,
     passwordHash,
     createdAt: new Date().toISOString(),
     portfolios: []
   };
   
-  data.users.push(newUser);
-  saveAccounts(data);
-  
-  return newUser;
+  const result = await users.insertOne(newUser);
+  return { ...newUser, _id: result.insertedId.toString() };
 }
 
 // Authenticate user
 export async function authenticateUser(username: string, password: string): Promise<UserAccount | null> {
-  const data = getAccounts();
-  const user = data.users.find(user => user.username === username);
+  const db = await connectToDatabase();
+  const users = db.collection<UserAccount>('users');
   
+  const user = await users.findOne({ username });
   if (!user) {
     return null;
   }
@@ -73,18 +57,25 @@ export async function authenticateUser(username: string, password: string): Prom
 }
 
 // Get user by ID
-export function getUserById(id: string): UserAccount | null {
-  const data = getAccounts();
-  return data.users.find(user => user.id === id) || null;
+export async function getUserById(id: string): Promise<UserAccount | null> {
+  const db = await connectToDatabase();
+  const users = db.collection<UserAccount>('users');
+  
+  try {
+    const user = await users.findOne({ _id: id });
+    return user;
+  } catch {
+    return null;
+  }
 }
 
 // Update user portfolios
-export function updateUserPortfolios(userId: string, portfolios: Portfolio[]): void {
-  const data = getAccounts();
-  const user = data.users.find(user => user.id === userId);
+export async function updateUserPortfolios(userId: string, portfolios: Portfolio[]): Promise<void> {
+  const db = await connectToDatabase();
+  const users = db.collection<UserAccount>('users');
   
-  if (user) {
-    user.portfolios = portfolios;
-    saveAccounts(data);
-  }
+  await users.updateOne(
+    { _id: userId },
+    { $set: { portfolios } }
+  );
 }
