@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { connectToDatabase } from './mongodb';
+import { connectToDatabase, isUsingInMemory } from './mongodb';
 
 export interface Portfolio {
   id: string;
@@ -16,8 +16,34 @@ export interface UserAccount {
   portfolios: Portfolio[];
 }
 
+// In-memory storage fallback
+const inMemoryUsers: UserAccount[] = [];
+
 // Create new account
 export async function createAccount(username: string, password: string): Promise<UserAccount> {
+  if (isUsingInMemory()) {
+    // Check if username already exists
+    const existingUser = inMemoryUsers.find(user => user.username === username);
+    if (existingUser) {
+      throw new Error('Username already exists');
+    }
+    
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
+    
+    // Create new user
+    const newUser: UserAccount = {
+      _id: Date.now().toString(),
+      username,
+      passwordHash,
+      createdAt: new Date().toISOString(),
+      portfolios: []
+    };
+    
+    inMemoryUsers.push(newUser);
+    return newUser;
+  }
+
   const db = await connectToDatabase();
   const users = db.collection<UserAccount>('users');
   
@@ -44,6 +70,16 @@ export async function createAccount(username: string, password: string): Promise
 
 // Authenticate user
 export async function authenticateUser(username: string, password: string): Promise<UserAccount | null> {
+  if (isUsingInMemory()) {
+    const user = inMemoryUsers.find(user => user.username === username);
+    if (!user) {
+      return null;
+    }
+    
+    const isValid = await bcrypt.compare(password, user.passwordHash);
+    return isValid ? user : null;
+  }
+
   const db = await connectToDatabase();
   const users = db.collection<UserAccount>('users');
   
@@ -58,6 +94,10 @@ export async function authenticateUser(username: string, password: string): Prom
 
 // Get user by ID
 export async function getUserById(id: string): Promise<UserAccount | null> {
+  if (isUsingInMemory()) {
+    return inMemoryUsers.find(user => user._id === id) || null;
+  }
+
   const db = await connectToDatabase();
   const users = db.collection<UserAccount>('users');
   
@@ -71,6 +111,14 @@ export async function getUserById(id: string): Promise<UserAccount | null> {
 
 // Update user portfolios
 export async function updateUserPortfolios(userId: string, portfolios: Portfolio[]): Promise<void> {
+  if (isUsingInMemory()) {
+    const user = inMemoryUsers.find(user => user._id === userId);
+    if (user) {
+      user.portfolios = portfolios;
+    }
+    return;
+  }
+
   const db = await connectToDatabase();
   const users = db.collection<UserAccount>('users');
   
