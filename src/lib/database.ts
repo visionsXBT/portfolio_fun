@@ -1,5 +1,5 @@
-import { writeFileSync, readFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
+import { join, dirname } from 'path';
 import bcrypt from 'bcryptjs';
 
 const DB_PATH = join(process.cwd(), 'data', 'accounts.json');
@@ -26,6 +26,11 @@ export interface AccountData {
 // Initialize database if it doesn't exist
 function initDatabase(): AccountData {
   if (!existsSync(DB_PATH)) {
+    // Ensure directory exists
+    const dir = dirname(DB_PATH);
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
     const data: AccountData = { users: [] };
     writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
   }
