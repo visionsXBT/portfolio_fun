@@ -1,8 +1,4 @@
-import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
 import bcrypt from 'bcryptjs';
-
-const DB_PATH = join(process.cwd(), 'data', 'accounts.json');
 
 export interface Portfolio {
   id: string;
@@ -23,28 +19,17 @@ export interface AccountData {
   users: UserAccount[];
 }
 
-// Initialize database if it doesn't exist
-function initDatabase(): AccountData {
-  if (!existsSync(DB_PATH)) {
-    // Ensure directory exists
-    const dir = dirname(DB_PATH);
-    if (!existsSync(dir)) {
-      mkdirSync(dir, { recursive: true });
-    }
-    const data: AccountData = { users: [] };
-    writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
-  }
-  return JSON.parse(readFileSync(DB_PATH, 'utf8'));
-}
+// In-memory database for serverless environment
+let accounts: AccountData = { users: [] };
 
 // Read all accounts
 export function getAccounts(): AccountData {
-  return initDatabase();
+  return accounts;
 }
 
-// Save accounts to file
+// Save accounts to memory
 export function saveAccounts(data: AccountData): void {
-  writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+  accounts = data;
 }
 
 // Create new account
