@@ -43,7 +43,7 @@ export default function SignInModal({ isOpen, onClose, onSuccess, onSwitchToSign
       } else {
         setError(data.error || "Sign in failed");
       }
-    } catch (error) {
+    } catch {
       setError("Network error. Please try again.");
     } finally {
       setIsLoading(false);
@@ -117,7 +117,7 @@ export default function SignInModal({ isOpen, onClose, onSuccess, onSwitchToSign
               onClick={onSwitchToSignUp}
               className="text-sm text-white/60 hover:text-white transition-colors"
             >
-              Don't have an account? Sign up
+              Don&apos;t have an account? Sign up
             </button>
           </div>
         </form>

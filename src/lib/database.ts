@@ -4,12 +4,19 @@ import bcrypt from 'bcryptjs';
 
 const DB_PATH = join(process.cwd(), 'data', 'accounts.json');
 
+export interface Portfolio {
+  id: string;
+  name: string;
+  rows: Array<{ mint: string }>;
+  isExpanded: boolean;
+}
+
 export interface UserAccount {
   id: string;
   username: string;
   passwordHash: string;
   createdAt: string;
-  portfolios: any[];
+  portfolios: Portfolio[];
 }
 
 export interface AccountData {
@@ -82,7 +89,7 @@ export function getUserById(id: string): UserAccount | null {
 }
 
 // Update user portfolios
-export function updateUserPortfolios(userId: string, portfolios: any[]): void {
+export function updateUserPortfolios(userId: string, portfolios: Portfolio[]): void {
   const data = getAccounts();
   const user = data.users.find(user => user.id === userId);
   

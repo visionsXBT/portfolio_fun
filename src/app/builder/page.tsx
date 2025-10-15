@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { PublicKey } from "@solana/web3.js";
 import Logo from "@/components/Logo";
 import AccountModal from "@/components/AccountModal";
@@ -20,7 +21,6 @@ type Portfolio = {
 
 function isValidMint(value: string): boolean {
   try {
-    // eslint-disable-next-line no-new
     new PublicKey(value);
     return true;
   } catch {
@@ -96,7 +96,6 @@ export default function BuilderPage() {
   const [tokenMeta, setTokenMeta] = useState<Record<string, { symbol?: string; name?: string; logoURI?: string }>>({});
   const [extraMeta, setExtraMeta] = useState<Record<string, { symbol?: string; name?: string; logoURI?: string }>>({});
   const [pumpStatus, setPumpStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
-  const [pumpEvents, setPumpEvents] = useState<Record<string, unknown>>({});
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [userAccount, setUserAccount] = useState<{ username: string; id: string } | null>(null);
@@ -108,11 +107,6 @@ export default function BuilderPage() {
     if (decoded) {
       setPortfolios(decoded);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const isRowValid = useCallback((row: PortfolioRow) => {
-    return isValidMint(row.mint);
   }, []);
 
   const addPortfolio = useCallback(() => {
@@ -255,7 +249,6 @@ export default function BuilderPage() {
       .then((r) => r.json())
       .then((data) => {
         const nextPrices: Record<string, number> = {};
-        const nextChanges: Record<string, number> = {};
         if (data && data.data) {
           for (const mint of allValidMints) {
             const entry = data.data[mint];
@@ -349,11 +342,8 @@ export default function BuilderPage() {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        const mintKey = typeof data?.mint === "string" ? data.mint : undefined;
-        setPumpEvents((prev) => {
-          if (mintKey) return { ...prev, [mintKey]: data };
-          return { ...prev, _last: data };
-        });
+        // Handle pump events if needed in the future
+        console.log("Pump event:", data);
       } catch {
         // ignore parse errors
       }
@@ -395,7 +385,7 @@ export default function BuilderPage() {
                   Welcome, {userAccount.username}
                 </span>
               )}
-              <a href="/" className="text-sm text-white/60 hover:text-white">← Home </a>
+              <Link href="/" className="text-sm text-white/60 hover:text-white">← Home </Link>
             </div>
           </div>
           <h1 className="text-3xl font-semibold mb-2">Portfolio Builder</h1>

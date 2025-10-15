@@ -70,7 +70,7 @@ export default function AccountModal({ isOpen, onClose, onSuccess, onSwitchToSig
       } else {
         setErrors({ username: data.error || "Account creation failed" });
       }
-    } catch (error) {
+    } catch {
       setErrors({ username: "Network error. Please try again." });
     } finally {
       setIsLoading(false);
