@@ -96,6 +96,7 @@ export default function BuilderPageContent() {
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [userAccount, setUserAccount] = useState<{ username: string; id: string } | null>(null);
+  const [isSharedPortfolio, setIsSharedPortfolio] = useState(false);
 
   // Hydrate from query param if present
   useEffect(() => {
@@ -103,6 +104,7 @@ export default function BuilderPageContent() {
     const decoded = decodePortfolios(encoded);
     if (decoded) {
       setPortfolios(decoded);
+      setIsSharedPortfolio(true); // Mark as shared/read-only
     }
   }, [searchParams]);
 
@@ -408,9 +410,14 @@ export default function BuilderPageContent() {
               <Link href="/" className="text-sm text-white/60 hover:text-white">← Home </Link>
             </div>
           </div>
-          <h1 className="text-3xl font-semibold mb-2">Portfolio Builder</h1>
+          <h1 className="text-3xl font-semibold mb-2">
+            {isSharedPortfolio ? "Shared Portfolio" : "Portfolio Builder"}
+          </h1>
           <p className="text-white/60">
-            Create multiple portfolios. Click on a portfolio to expand and add tokens.
+            {isSharedPortfolio 
+              ? "Viewing a shared portfolio. Sign in to create and edit your own portfolios."
+              : "Create multiple portfolios. Click on a portfolio to expand and add tokens."
+            }
           </p>
         </div>
 
@@ -473,7 +480,7 @@ export default function BuilderPageContent() {
                           {portfolio.isExpanded ? "▼" : "▶"}
                         </button>
                         
-                        {editingPortfolioId === portfolio.id ? (
+                        {editingPortfolioId === portfolio.id && !isSharedPortfolio ? (
                           <input
                             type="text"
                             value={portfolio.name}
@@ -489,15 +496,17 @@ export default function BuilderPageContent() {
                           <h3 className="text-lg font-medium text-white">{portfolio.name}</h3>
                         )}
                         
-                        <button
-                          onClick={() => setEditingPortfolioId(portfolio.id)}
-                          className="text-white/40 hover:text-white/60 transition-colors"
-                        >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                            <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                          </svg>
-                        </button>
+                        {!isSharedPortfolio && (
+                          <button
+                            onClick={() => setEditingPortfolioId(portfolio.id)}
+                            className="text-white/40 hover:text-white/60 transition-colors"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                              <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                          </button>
+                        )}
                       </div>
                       
                       <div className="flex items-center gap-4 text-sm text-white/60">
@@ -528,12 +537,14 @@ export default function BuilderPageContent() {
                                   (e.target as HTMLImageElement).src = "/placeholder-token.png";
                                 }}
                               />
-                              <button
-                                onClick={() => removeRow(portfolio.id, row.mint)}
-                                className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                              >
-                                -
-                              </button>
+                              {!isSharedPortfolio && (
+                                <button
+                                  onClick={() => removeRow(portfolio.id, row.mint)}
+                                  className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                                >
+                                  -
+                                </button>
+                              )}
                             </div>
                           );
                         })}
@@ -544,25 +555,29 @@ export default function BuilderPageContent() {
                         )}
                       </div>
                       
-                      <button
-                        onClick={() => copyPortfolioShare(portfolio)}
-                        className="text-white/60 hover:text-white transition-colors"
-                        title="Share this portfolio"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-                          <polyline points="16,6 12,2 8,6"/>
-                          <line x1="12" y1="2" x2="12" y2="15"/>
-                        </svg>
-                      </button>
+                      {!isSharedPortfolio && (
+                        <button
+                          onClick={() => copyPortfolioShare(portfolio)}
+                          className="text-white/60 hover:text-white transition-colors"
+                          title="Share this portfolio"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                            <polyline points="16,6 12,2 8,6"/>
+                            <line x1="12" y1="2" x2="12" y2="15"/>
+                          </svg>
+                        </button>
+                      )}
                       
-                      <button
-                        onClick={() => removePortfolio(portfolio.id)}
-                        className="text-red-400 hover:text-red-300 transition-colors"
-                        title="Delete portfolio"
-                      >
-                        ✕
-                      </button>
+                      {!isSharedPortfolio && (
+                        <button
+                          onClick={() => removePortfolio(portfolio.id)}
+                          className="text-red-400 hover:text-red-300 transition-colors"
+                          title="Delete portfolio"
+                        >
+                          ✕
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -570,25 +585,27 @@ export default function BuilderPageContent() {
                   {portfolio.isExpanded && (
                     <div className="space-y-4">
                       {/* Add Token Input */}
-                      <div className="flex gap-3">
-                        <input
-                          type="text"
-                          value={currentInput}
-                          onChange={(e) => setCurrentInput(e.target.value)}
-                          placeholder="Paste token contract address..."
-                          className="flex-1 rounded-md border border-white/20 bg-white/5 text-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") addRow(portfolio.id);
-                          }}
-                        />
-                        <button
-                          onClick={() => addRow(portfolio.id)}
-                          disabled={!extractMintFromInput(currentInput)}
-                          className="rounded-md bg-[var(--brand-end)] hover:bg-[var(--brand-start)] px-4 py-2 text-sm text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Add Token
-                        </button>
-                      </div>
+                      {!isSharedPortfolio && (
+                        <div className="flex gap-3">
+                          <input
+                            type="text"
+                            value={currentInput}
+                            onChange={(e) => setCurrentInput(e.target.value)}
+                            placeholder="Paste token contract address..."
+                            className="flex-1 rounded-md border border-white/20 bg-white/5 text-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") addRow(portfolio.id);
+                            }}
+                          />
+                          <button
+                            onClick={() => addRow(portfolio.id)}
+                            disabled={!extractMintFromInput(currentInput)}
+                            className="rounded-md bg-[var(--brand-end)] hover:bg-[var(--brand-start)] px-4 py-2 text-sm text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Add Token
+                          </button>
+                        </div>
+                      )}
 
                       {/* Token List */}
                       {portfolio.rows.length > 0 && (
@@ -633,12 +650,14 @@ export default function BuilderPageContent() {
                                     </div>
                                   )}
                                   
-                                  <button
-                                    onClick={() => removeRow(portfolio.id, row.mint)}
-                                    className="text-red-400 hover:text-red-300 transition-colors"
-                                  >
-                                    ✕
-                                  </button>
+                                  {!isSharedPortfolio && (
+                                    <button
+                                      onClick={() => removeRow(portfolio.id, row.mint)}
+                                      className="text-red-400 hover:text-red-300 transition-colors"
+                                    >
+                                      ✕
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             );
@@ -653,7 +672,7 @@ export default function BuilderPageContent() {
           </div>
         )}
 
-        {portfolios.length > 0 && (
+        {portfolios.length > 0 && !isSharedPortfolio && (
           <div className="flex gap-4 mt-8">
             <button
               onClick={addPortfolio}
