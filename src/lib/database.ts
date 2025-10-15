@@ -45,6 +45,9 @@ export async function createAccount(username: string, password: string): Promise
   }
 
   const db = await connectToDatabase();
+  if (!db) {
+    throw new Error('Database connection failed');
+  }
   const users = db.collection<UserAccount>('users');
   
   // Check if username already exists
@@ -81,6 +84,9 @@ export async function authenticateUser(username: string, password: string): Prom
   }
 
   const db = await connectToDatabase();
+  if (!db) {
+    throw new Error('Database connection failed');
+  }
   const users = db.collection<UserAccount>('users');
   
   const user = await users.findOne({ username });
@@ -99,6 +105,9 @@ export async function getUserById(id: string): Promise<UserAccount | null> {
   }
 
   const db = await connectToDatabase();
+  if (!db) {
+    return null;
+  }
   const users = db.collection<UserAccount>('users');
   
   try {
@@ -120,6 +129,9 @@ export async function updateUserPortfolios(userId: string, portfolios: Portfolio
   }
 
   const db = await connectToDatabase();
+  if (!db) {
+    throw new Error('Database connection failed');
+  }
   const users = db.collection<UserAccount>('users');
   
   await users.updateOne(
