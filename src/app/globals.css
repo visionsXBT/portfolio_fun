@@ -30,8 +30,41 @@ body {
   color: var(--foreground);
   position: relative;
   overflow-x: hidden;
-  animation: gradientFlow 20s ease-in-out infinite;
+  animation: gradientFlow 8s ease-in-out infinite;
   will-change: background;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Disable text selection and right-click on all elements */
+* {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Allow text selection only in input fields and textareas */
+input, textarea, [contenteditable] {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+/* Context menu (right-click) is now enabled for debugging */
+
+/* Disable drag and drop */
+* {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
 }
 
 @keyframes gradientFlow {
@@ -42,21 +75,21 @@ body {
                 var(--background);
   }
   25% {
-    background: radial-gradient(1200px 800px at 60% 20%, color-mix(in oklab, var(--brand-start) 32%, transparent), transparent 60%),
-                radial-gradient(1000px 700px at 20% 20%, color-mix(in oklab, var(--brand-end) 28%, transparent), transparent 55%),
-                radial-gradient(800px 600px at 30% 90%, color-mix(in oklab, var(--brand-start) 22%, transparent), transparent 50%),
+    background: radial-gradient(1200px 800px at 20% 40%, color-mix(in oklab, var(--brand-start) 40%, transparent), transparent 60%),
+                radial-gradient(1000px 700px at 80% 40%, color-mix(in oklab, var(--brand-end) 35%, transparent), transparent 55%),
+                radial-gradient(800px 600px at 10% 20%, color-mix(in oklab, var(--brand-start) 30%, transparent), transparent 50%),
                 var(--background);
   }
   50% {
-    background: radial-gradient(1200px 800px at 20% 60%, color-mix(in oklab, var(--brand-start) 38%, transparent), transparent 60%),
-                radial-gradient(1000px 700px at 80% 20%, color-mix(in oklab, var(--brand-end) 32%, transparent), transparent 55%),
-                radial-gradient(800px 600px at 20% 100%, color-mix(in oklab, var(--brand-start) 28%, transparent), transparent 50%),
+    background: radial-gradient(1200px 800px at 10% 80%, color-mix(in oklab, var(--brand-start) 45%, transparent), transparent 60%),
+                radial-gradient(1000px 700px at 90% 10%, color-mix(in oklab, var(--brand-end) 40%, transparent), transparent 55%),
+                radial-gradient(800px 600px at 70% 20%, color-mix(in oklab, var(--brand-start) 35%, transparent), transparent 50%),
                 var(--background);
   }
   75% {
-    background: radial-gradient(1200px 800px at 40% 80%, color-mix(in oklab, var(--brand-end) 30%, transparent), transparent 60%),
-                radial-gradient(1000px 700px at 60% 60%, color-mix(in oklab, var(--brand-start) 35%, transparent), transparent 55%),
-                radial-gradient(800px 600px at 80% 80%, color-mix(in oklab, var(--brand-end) 20%, transparent), transparent 50%),
+    background: radial-gradient(1200px 800px at 60% 20%, color-mix(in oklab, var(--brand-end) 38%, transparent), transparent 60%),
+                radial-gradient(1000px 700px at 30% 80%, color-mix(in oklab, var(--brand-start) 42%, transparent), transparent 55%),
+                radial-gradient(800px 600px at 90% 90%, color-mix(in oklab, var(--brand-end) 28%, transparent), transparent 50%),
                 var(--background);
   }
 }

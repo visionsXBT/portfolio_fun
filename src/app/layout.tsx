@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Golos_Text } from "next/font/google";
 import "./globals.css";
 import PageTransition from "@/components/PageTransition";
+import BottomBar from "@/components/BottomBar";
+import ClientBody from "@/components/ClientBody";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,13 +33,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${golosText.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <ClientBody className={`${golosText.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}>
         <PageTransition>
           {children}
+          <BottomBar />
         </PageTransition>
-      </body>
+      </ClientBody>
     </html>
   );
 }

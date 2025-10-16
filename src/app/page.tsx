@@ -3,7 +3,7 @@ import Image from "next/image";
 
 export default function Home() {
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center pb-16">
       {/* Header with Logo */}
       <div className="absolute top-0 left-0 p-4 sm:p-6 md:p-8">
         <Logo size="large" />

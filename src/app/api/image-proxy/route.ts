@@ -13,8 +13,10 @@ export async function GET(request: NextRequest) {
       headers: {
         // Add any necessary headers for the upstream request
         'User-Agent': 'Mozilla/5.0 (compatible; onPort/1.0)',
+        'Accept': 'image/*',
       },
       redirect: 'follow', // Follow redirects
+      cache: 'no-cache', // Don't cache the upstream request
     });
 
     if (!response.ok) {
@@ -25,14 +27,17 @@ export async function GET(request: NextRequest) {
     const contentType = response.headers.get('content-type');
     const arrayBuffer = await response.arrayBuffer();
 
-    console.log('✅ Image proxy success:', imageUrl, contentType);
+    console.log('✅ Image proxy success:', imageUrl, contentType, `(${arrayBuffer.byteLength} bytes)`);
 
     const headers = new Headers();
     if (contentType) {
       headers.set('Content-Type', contentType);
     }
-    headers.set('Cache-Control', 'public, max-age=3600, immutable'); // Cache for 1 hour
+    // Cache for 1 hour for better performance, but allow revalidation
+    headers.set('Cache-Control', 'public, max-age=3600, must-revalidate');
     headers.set('Access-Control-Allow-Origin', '*'); // Allow CORS for the client
+    headers.set('Access-Control-Allow-Methods', 'GET');
+    headers.set('Access-Control-Allow-Headers', 'Content-Type');
 
     return new NextResponse(Buffer.from(arrayBuffer), { headers });
 

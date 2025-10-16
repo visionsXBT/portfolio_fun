@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 
 interface TokenImageProps {
-  src?: string;
+  src?: string | null;
   alt: string;
   className?: string;
   fallbackSrc?: string;
@@ -12,30 +12,47 @@ interface TokenImageProps {
 export default function TokenImage({ 
   src, 
   alt, 
-  className = "w-8 h-8 rounded-full", 
+  className = "w-8 h-8 rounded-lg", 
   fallbackSrc = "/placeholder-token.svg" 
 }: TokenImageProps) {
   console.log('🖼️ TokenImage rendered with src:', src, 'alt:', alt);
   
-  const [imgSrc, setImgSrc] = useState(src || fallbackSrc);
+  const [imgSrc, setImgSrc] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
-  const [isLoading, setIsLoading] = useState(!!src);
+  const [isLoading, setIsLoading] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   const handleError = useCallback(() => {
-    if (!hasError) {
+    console.log('❌ Image failed to load:', imgSrc, 'retry count:', retryCount);
+    
+    if (retryCount < 2 && imgSrc && !imgSrc.includes('placeholder')) {
+      // Retry up to 2 times for non-placeholder images
+      console.log('🔄 Retrying image load...');
+      setRetryCount(prev => prev + 1);
+      setIsLoading(true);
+      setHasError(false);
+      // Force a fresh request by adding a small delay and updating the src
+      setTimeout(() => {
+        setImgSrc(prev => prev ? `${prev}${prev.includes('?') ? '&' : '?'}retry=${retryCount + 1}` : prev);
+      }, 100);
+    } else {
+      // Give up and use fallback
       setHasError(true);
       setIsLoading(false);
       setImgSrc(fallbackSrc);
     }
-  }, [hasError, fallbackSrc]);
+  }, [fallbackSrc, imgSrc, retryCount]);
 
   const handleLoad = useCallback(() => {
+    console.log('✅ Image loaded successfully:', imgSrc);
     setIsLoading(false);
-  }, []);
+    setHasError(false);
+    setRetryCount(0); // Reset retry count on successful load
+  }, [imgSrc]);
 
-  // Convert pump.fun URLs to use image proxy to avoid CORS issues
+  // Convert pump.fun URLs and other external URLs to use image proxy to avoid CORS issues
   const getProxiedUrl = useCallback((url: string) => {
-    if (url && url.includes('pump.fun')) {
+    if (url && (url.includes('pump.fun') || url.includes('coingecko.com') || url.includes('moralis.io') || url.includes('dexscreener.com') || url.includes('cdn.dexscreener.com') || url.includes('dd.dexscreener.com') || url.includes('four.meme'))) {
       return `/api/image-proxy?url=${encodeURIComponent(url)}`;
     }
     return url;
@@ -43,19 +60,24 @@ export default function TokenImage({
 
   // Update imgSrc when src prop changes
   useEffect(() => {
-    if (src && src !== imgSrc) {
-      console.log('🔄 TokenImage src changed:', imgSrc, '->', src);
+    if (src && src.trim() !== '') {
+      console.log('🔄 TokenImage src provided:', src);
       const proxiedSrc = getProxiedUrl(src);
-      setImgSrc(proxiedSrc);
+      console.log('🔄 TokenImage proxied src:', proxiedSrc);
+      
+      // Always set loading state and reset error when src changes
       setIsLoading(true);
-      setHasError(false); // Reset error state when src changes
-    } else if (!src && imgSrc !== fallbackSrc) {
+      setHasError(false);
+      setRetryCount(0);
+      setImgSrc(proxiedSrc);
+    } else {
       console.log('🔄 TokenImage src is empty, using fallback');
       setImgSrc(fallbackSrc);
       setIsLoading(false);
       setHasError(false);
+      setRetryCount(0);
     }
-  }, [src, imgSrc, fallbackSrc, getProxiedUrl]);
+  }, [src, fallbackSrc, getProxiedUrl]);
 
   // If no src provided, use fallback immediately
   if (!src || src === '') {
@@ -81,6 +103,7 @@ export default function TokenImage({
         onLoad={handleLoad}
         loading="lazy"
         crossOrigin="anonymous"
+        key={`${imgSrc}-${retryCount}`} // Force re-render when imgSrc or retry count changes
       />
     </div>
   );
