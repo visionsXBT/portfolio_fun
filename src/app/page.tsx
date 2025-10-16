@@ -1,4 +1,5 @@
 import Logo from "@/components/Logo";
+import Image from "next/image";
 
 export default function Home() {
   return (
@@ -14,13 +15,19 @@ export default function Home() {
             <span className="inline-block h-2 w-2 rounded-full bg-[var(--brand-end)]" />
             Build portfolios of any kind with onPort
           </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-semibold tracking-tight leading-tight mb-6 sm:mb-8">
-            Build, value, and share crypto portfolios
-          </h1>
-          <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/70 mb-8 sm:mb-10 md:mb-12 lg:mb-16 max-w-3xl mx-auto leading-relaxed">
-            Paste a token link or mint from pump.fun, bonk.fun, believe, or bags. We auto-detect
-            the token, fetch prices, and create a shareable portfolio link.
-          </p>
+          
+          {/* Hero Image */}
+          <div className="mb-8 sm:mb-10 md:mb-12 lg:mb-16 flex justify-center">
+            <Image
+              src="/header_text.png"
+              alt="Shill your bags in a fun way. No matter the chain."
+              width={1200}
+              height={600}
+              className="max-w-full h-auto w-full max-w-4xl ml-24"
+              priority
+            />
+          </div>
+          
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
             <a href="/builder" className="rounded-lg bg-[var(--brand-end)] hover:bg-[var(--brand-start)] px-6 py-3 sm:px-8 sm:py-4 md:px-10 md:py-5 text-sm sm:text-base md:text-lg font-medium text-white transition-colors">
               Open portfolio builder
