@@ -21,19 +21,40 @@ export async function connectToDatabase(): Promise<Db> {
     console.log('URI:', uri ? `${uri.substring(0, 20)}...` : 'No URI provided');
     console.log('Database:', dbName);
     
+    // Create a new client for each connection attempt (better for serverless)
     client = new MongoClient(uri, {
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 10000,
+      connectTimeoutMS: 15000,
       socketTimeoutMS: 45000,
-      maxPoolSize: 10,
-      minPoolSize: 1,
-      maxIdleTimeMS: 30000,
+      maxPoolSize: 1, // Reduce pool size for serverless
+      minPoolSize: 0, // Allow zero connections in serverless
+      maxIdleTimeMS: 10000, // Close idle connections faster
       retryWrites: true,
       retryReads: true,
+      // SSL/TLS configuration for serverless environments
+      tls: true,
+      tlsAllowInvalidCertificates: false,
+      tlsAllowInvalidHostnames: false,
+      // Additional options for Vercel compatibility
+      compressors: ['zlib'],
+      zlibCompressionLevel: 6,
     });
     
-    // Test the connection first
-    await client.connect();
+    // Connect with retry logic
+    let retries = 3;
+    while (retries > 0) {
+      try {
+        await client.connect();
+        break;
+      } catch (connectError) {
+        retries--;
+        if (retries === 0) {
+          throw connectError;
+        }
+        console.log(`Connection attempt failed, retrying... (${retries} attempts left)`);
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
+      }
+    }
     
     // Test with a simple ping
     await client.db('admin').command({ ping: 1 });
