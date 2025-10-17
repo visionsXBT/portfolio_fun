@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import { PublicKey } from '@solana/web3.js';
+import Logo from '@/components/Logo';
 import TokenImage from '@/components/TokenImage';
 
 interface PortfolioRow {
@@ -12,6 +14,8 @@ interface Portfolio {
   id: string;
   name: string;
   rows: PortfolioRow[];
+  isExpanded: boolean;
+  username?: string;
 }
 
 interface TokenMeta {
@@ -23,38 +27,303 @@ interface TokenMeta {
   priceChange24h?: number;
 }
 
+// Validation functions
+function isValidMint(value: string): boolean {
+  try {
+    new PublicKey(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isValidBNBAddress(value: string): boolean {
+  // BNB Smart Chain uses Ethereum-compatible addresses (0x format, 42 characters)
+  const bnbAddressRegex = /^0x[a-fA-F0-9]{40}$/;
+  return bnbAddressRegex.test(value);
+}
+
 export default function PublicPortfolioView() {
   const params = useParams();
   const portfolioId = params?.id as string;
   
-  const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
+  const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [tokenMeta, setTokenMeta] = useState<Record<string, TokenMeta>>({});
+  const [extraMeta, setExtraMeta] = useState<Record<string, TokenMeta>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Dedicated function for pump.fun image fetching (copied from main page)
+  const fetchPumpFunImages = useCallback(async (mint: string): Promise<string | null> => {
+    console.log('🔍 Trying image sources for Solana token:', mint);
+    
+    // For pump tokens, just return the URL directly without validation
+    if (mint.toLowerCase().includes('pump')) {
+      const pumpUrl = `https://images.pump.fun/coin-image/${mint}?variant=600x600`;
+      console.log('✅ Returning pump.fun URL directly:', pumpUrl);
+      return pumpUrl;
+    }
+    
+    // For non-pump tokens, try DexScreener first (primary source)
+    try {
+      // Try direct DexScreener image URL first (most reliable)
+      // Skip HEAD request validation due to CORS - let TokenImage component handle it through proxy
+      const directDexScreenerUrl = `https://dd.dexscreener.com/ds-data/tokens/solana/${mint}.png?key=2d2e69`;
+      console.log('✅ Returning direct DexScreener URL (will be proxied):', directDexScreenerUrl);
+      return directDexScreenerUrl;
+    } catch (error) {
+      console.log('❌ Direct DexScreener URL failed:', (error as Error).message);
+    }
+    
+    // Try DexScreener API for image data
+    try {
+      const dexScreenerUrl = `https://api.dexscreener.com/latest/dex/tokens/${mint}`;
+      console.log('🔍 Trying DexScreener API for Solana token image:', dexScreenerUrl);
+      
+      const response = await fetch(dexScreenerUrl, {
+        signal: AbortSignal.timeout(5000)
+      });
+      
+      console.log('📊 DexScreener response status:', response.status, response.ok);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📊 DexScreener response data:', JSON.stringify(data, null, 2));
+        
+        if (data.pairs && data.pairs.length > 0) {
+          const pair = data.pairs[0];
+          console.log('📊 DexScreener pair data:', JSON.stringify(pair, null, 2));
+          
+          // Check for imageUrl in the baseToken info
+          if (pair.baseToken?.info?.imageUrl) {
+            console.log('✅ Found image from DexScreener imageUrl:', pair.baseToken.info.imageUrl);
+            return pair.baseToken.info.imageUrl;
+          }
+          
+          // Check for imageHash in the baseToken info (DexScreener CDN format)
+          if (pair.baseToken?.info?.imageHash) {
+            const cdnUrl = `https://cdn.dexscreener.com/cms/images/${pair.baseToken.info.imageHash}?width=800&height=800&fit=crop&quality=95&format=auto`;
+            console.log('✅ Found image from DexScreener CDN:', cdnUrl);
+            return cdnUrl;
+          }
+        }
+      }
+    } catch (error) {
+      console.log('❌ DexScreener image failed:', (error as Error).message);
+    }
+    
+    // For non-pump tokens, try a few pump.fun URLs as fallback
+    const urls = [
+      `https://images.pump.fun/coin-image/${mint}?variant=600x600`,
+      `https://images.pump.fun/coin-image/${mint}`,
+      `https://pump.fun/${mint}.png`,
+    ];
+    
+    console.log('🔍 Testing', urls.length, 'pump.fun URLs as fallback...');
+    
+    for (const url of urls) {
+      try {
+        console.log('🔍 Testing pump.fun URL:', url);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        
+        const response = await fetch(url, { 
+          method: 'HEAD',
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          console.log('✅ Found image from pump.fun URL:', url);
+          return url;
+        } else {
+          console.log('❌ Pump.fun URL not found:', url, response.status);
+        }
+      } catch (error) {
+        console.log('❌ Pump.fun URL failed:', url, (error as Error).message);
+      }
+    }
+    
+    console.log('❌ No image found for Solana token:', mint);
+    return null;
+  }, []);
+
+  // Function to scrape Four.meme page and extract image UUID
+  const scrapeFourMemeImage = useCallback(async (contractAddress: string): Promise<string | null> => {
+    try {
+      console.log('🕷️ Scraping Four.meme page for contract:', contractAddress);
+      
+      // Try different possible URL patterns for Four.meme token pages
+      const possibleUrls = [
+        `https://four.meme/market/${contractAddress}`,
+        `https://four.meme/token/${contractAddress}`,
+        `https://four.meme/${contractAddress}`,
+        `https://four.meme/market/${contractAddress.toLowerCase()}`,
+        `https://four.meme/token/${contractAddress.toLowerCase()}`
+      ];
+      
+      for (const pageUrl of possibleUrls) {
+        try {
+          const response = await fetch(pageUrl, {
+            signal: AbortSignal.timeout(10000),
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (compatible; onPort/1.0)',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            }
+          });
+          
+          if (response.ok) {
+            const html = await response.text();
+            
+            // Look for image URL patterns in the HTML
+            const imagePatterns = [
+              /https:\/\/static\.four\.meme\/market\/([a-f0-9-]+\.png)/gi,
+              /https%3A%2F%2Fstatic\.four\.meme%2Fmarket%2F([a-f0-9-]+\.png)/gi,
+              /background-image:\s*url\(['"]?https:\/\/static\.four\.meme\/market\/([a-f0-9-]+\.png)['"]?\)/gi,
+              /data-src=['"]https:\/\/static\.four\.meme\/market\/([a-f0-9-]+\.png)['"]/gi,
+              /src=['"]https:\/\/static\.four\.meme\/market\/([a-f0-9-]+\.png)['"]/gi
+            ];
+            
+            for (const pattern of imagePatterns) {
+              const matches = html.match(pattern);
+              if (matches && matches.length > 0) {
+                const fullMatch = matches[0];
+                const uuidMatch = fullMatch.match(/([a-f0-9-]+\.png)/i);
+                
+                if (uuidMatch) {
+                  const uuid = uuidMatch[1];
+                  const imageUrl = `https://four.meme/_next/image?url=https%3A%2F%2Fstatic.four.meme%2Fmarket%2F${uuid}&w=48&q=75`;
+                  console.log('✅ Found Four.meme image UUID:', uuid);
+                  return imageUrl;
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.log('❌ Four.meme page fetch failed:', pageUrl, (error as Error).message);
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.log('❌ Four.meme scraping failed:', (error as Error).message);
+      return null;
+    }
+  }, []);
+
+  const fetchBNBTokenImage = useCallback(async (address: string): Promise<string | null> => {
+    console.log('🔍 Trying BNB token image sources for address:', address);
+    
+    // Try scraping Four.meme for BNB tokens first (primary source)
+    try {
+      console.log('🔄 Trying Four.meme scraping (primary)...');
+      const scrapedImageUrl = await scrapeFourMemeImage(address);
+      
+      if (scrapedImageUrl) {
+        console.log('✅ Returning scraped Four.meme URL (will be proxied):', scrapedImageUrl);
+        return scrapedImageUrl;
+      } else {
+        console.log('❌ Four.meme scraping failed, trying fallbacks...');
+      }
+    } catch (error) {
+      console.log('❌ Four.meme scraping failed:', (error as Error).message);
+    }
+    
+    // Try DexScreener for BNB token image as fallback
+    try {
+      const dexScreenerUrl = `https://api.dexscreener.com/latest/dex/tokens/${address}`;
+      console.log('🔄 Trying DexScreener for BNB image (fallback):', dexScreenerUrl);
+      
+      const response = await fetch(dexScreenerUrl, {
+        signal: AbortSignal.timeout(5000)
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.pairs && data.pairs.length > 0) {
+          const pair = data.pairs[0];
+          
+          // Check for imageUrl in the baseToken info
+          if (pair.baseToken?.info?.imageUrl) {
+            console.log('✅ Found image from DexScreener imageUrl:', pair.baseToken.info.imageUrl);
+            return pair.baseToken.info.imageUrl;
+          }
+          
+          // Check for imageHash in the baseToken info (DexScreener CDN format)
+          if (pair.baseToken?.info?.imageHash) {
+            const cdnUrl = `https://cdn.dexscreener.com/cms/images/${pair.baseToken.info.imageHash}?width=800&height=800&fit=crop&quality=95&format=auto`;
+            console.log('✅ Found image from DexScreener CDN:', cdnUrl);
+            return cdnUrl;
+          }
+        }
+      }
+    } catch (error) {
+      console.log('❌ DexScreener image failed:', (error as Error).message);
+    }
+    
+    // Try CoinGecko API for BNB Smart Chain tokens
+    try {
+      const coinGeckoUrl = `https://api.coingecko.com/api/v3/coins/binance-smart-chain/contract/${address.toLowerCase()}`;
+      console.log('🔄 Trying CoinGecko:', coinGeckoUrl);
+      
+      const response = await fetch(coinGeckoUrl, {
+        signal: AbortSignal.timeout(5000)
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.image?.large) {
+          console.log('✅ Found image from CoinGecko:', data.image.large);
+          return data.image.large;
+        }
+      }
+    } catch (error) {
+      console.log('❌ CoinGecko failed:', (error as Error).message);
+    }
+    
+    // Try Moralis API for BNB tokens
+    try {
+      const moralisUrl = `https://deep-index.moralis.io/api/v2.2/token-metadata?chain=bsc&addresses[]=${address}`;
+      console.log('🔄 Trying Moralis:', moralisUrl);
+      
+      const response = await fetch(moralisUrl, {
+        headers: {
+          'X-API-Key': process.env.NEXT_PUBLIC_MORALIS_API_KEY || '',
+        },
+        signal: AbortSignal.timeout(5000)
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data[0]?.logo) {
+          console.log('✅ Found image from Moralis:', data[0].logo);
+          return data[0].logo;
+        }
+      }
+    } catch (error) {
+      console.log('❌ Moralis failed:', (error as Error).message);
+    }
+    
+    console.log('❌ No BNB token images found for address:', address);
+    return null;
+  }, [scrapeFourMemeImage]);
 
   useEffect(() => {
     if (!portfolioId) return;
 
     const loadPortfolio = async () => {
       try {
-        // Try to load from localStorage first (for shared portfolios)
-        const sharedPortfolios = localStorage.getItem('sharedPortfolios');
-        if (sharedPortfolios) {
-          const portfolios = JSON.parse(sharedPortfolios);
-          const foundPortfolio = portfolios.find((p: Portfolio) => p.id === portfolioId);
-          if (foundPortfolio) {
-            setPortfolio(foundPortfolio);
-            await fetchTokenMetadata(foundPortfolio.rows.map((r: PortfolioRow) => r.mint));
-            setIsLoading(false);
-            return;
-          }
-        }
-
-        // If not found in localStorage, try to fetch from API
+        // Fetch from API (which will use MongoDB)
         const response = await fetch(`/api/portfolio/${portfolioId}`);
         if (response.ok) {
           const portfolioData = await response.json();
-          setPortfolio(portfolioData);
+          // Structure it like the main website expects
+          const portfolio: Portfolio = {
+            ...portfolioData,
+            isExpanded: true // Always expanded for shared view
+          };
+          setPortfolios([portfolio]);
           await fetchTokenMetadata(portfolioData.rows.map((r: PortfolioRow) => r.mint));
         } else {
           setError('Portfolio not found');
@@ -68,17 +337,20 @@ export default function PublicPortfolioView() {
     };
 
     loadPortfolio();
-  }, [portfolioId]);
+  }, [portfolioId, fetchPumpFunImages, fetchBNBTokenImage, scrapeFourMemeImage]);
 
   const fetchTokenMetadata = async (mints: string[]) => {
     try {
-      // Fetch metadata from DexScreener
+      console.log('🔍 Fetching metadata for mints:', mints);
+      
+      // First, try to get basic metadata from DexScreener
       const dexScreenerIds = mints.join(",");
       const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${dexScreenerIds}`);
       
+      const meta: Record<string, TokenMeta> = {};
+      
       if (response.ok) {
         const data = await response.json();
-        const meta: Record<string, TokenMeta> = {};
         
         if (data.pairs) {
           for (const pair of data.pairs) {
@@ -87,14 +359,59 @@ export default function PublicPortfolioView() {
               meta[mint] = {
                 symbol: pair.baseToken?.symbol,
                 name: pair.baseToken?.name,
-                marketCap: parseFloat(pair.marketCap),
-                priceChange24h: parseFloat(pair.priceChange?.h24)
+                marketCap: parseFloat(pair.marketCap || 0),
+                priceChange24h: parseFloat(pair.priceChange?.h24 || 0),
+                // Include any available logoURI from DexScreener if it exists
+                ...(pair.baseToken?.info?.imageUrl ? { logoURI: pair.baseToken.info.imageUrl } : {}),
+                ...(pair.baseToken?.info?.imageHash ? { logoURI: `https://cdn.dexscreener.com/cms/images/${pair.baseToken.info.imageHash}?width=800&height=800&fit=crop&quality=95&format=auto` } : {})
               };
             }
           }
         }
-        
-        setTokenMeta(meta);
+      }
+      
+      setTokenMeta(meta);
+      
+      // Now fetch images for each token individually
+      for (const mint of mints) {
+        try {
+          let logoURI = null;
+          
+          // Fetch image based on token type
+          if (isValidMint(mint)) {
+            console.log('🖼️ Fetching Solana token image for mint:', mint);
+            logoURI = await fetchPumpFunImages(mint);
+            console.log('🖼️ Solana token image result:', logoURI);
+          } else if (isValidBNBAddress(mint)) {
+            console.log('🖼️ Fetching BNB token image for address:', mint);
+            logoURI = await fetchBNBTokenImage(mint);
+            console.log('🖼️ BNB token image result:', logoURI);
+          }
+          
+          console.log('🖼️ Individual image result for', mint, ':', logoURI);
+          
+          setExtraMeta(prev => {
+            // Only update logoURI if we have a valid URL, never override with null/undefined
+            // Also preserve any existing valid logoURI
+            const existingLogoURI = prev[mint]?.logoURI;
+            const hasValidExistingURL = existingLogoURI && existingLogoURI.trim() !== '';
+            const hasValidNewURL = logoURI && logoURI.trim() !== '';
+            
+            const newMeta = {
+              ...prev,
+              [mint]: {
+                ...prev[mint],
+                // Only set logoURI if we have a valid new URL, preserve existing valid URLs
+                ...(hasValidNewURL ? { logoURI } : hasValidExistingURL ? { logoURI: existingLogoURI } : {})
+              }
+            };
+            console.log('🔄 Setting extraMeta for', mint, ':', newMeta[mint]);
+            console.log('🔄 URL preservation check - existing:', hasValidExistingURL, 'new:', hasValidNewURL);
+            return newMeta;
+          });
+        } catch (error) {
+          console.error('Error fetching image for mint:', mint, error);
+        }
       }
     } catch (error) {
       console.error('Error fetching token metadata:', error);
@@ -113,114 +430,215 @@ export default function PublicPortfolioView() {
     }
   };
 
+  const portfolioStats = useMemo(() => {
+    return portfolios.map(portfolio => {
+      const portfolioMints = portfolio.rows.map(r => r.mint);
+      
+      // Calculate average change using both priceChanges24h and extraMeta
+      const portfolioChanges = portfolioMints.map(mint => {
+        const tokenMetaData = tokenMeta[mint] || {};
+        const extraMetaData = extraMeta[mint] || {};
+        const meta = {
+          ...tokenMetaData,
+          ...extraMetaData,
+          priceChange24h: extraMetaData.priceChange24h || tokenMetaData.priceChange24h
+        };
+        return meta?.priceChange24h || 0;
+      });
+      const avgChange = portfolioChanges.length > 0 
+        ? portfolioChanges.reduce((sum, change) => sum + change, 0) / portfolioChanges.length 
+        : 0;
+
+      // Calculate average market cap
+      const portfolioMarketCaps = portfolioMints.map(mint => {
+        const tokenMetaData = tokenMeta[mint] || {};
+        const extraMetaData = extraMeta[mint] || {};
+        const meta = {
+          ...tokenMetaData,
+          ...extraMetaData,
+          marketCap: extraMetaData.marketCap || tokenMetaData.marketCap
+        };
+        return meta?.marketCap || 0;
+      });
+      const avgMarketCap = portfolioMarketCaps.length > 0 
+        ? portfolioMarketCaps.reduce((sum, cap) => sum + cap, 0) / portfolioMarketCaps.length 
+        : 0;
+
+      return {
+        avgChange,
+        avgMarketCap
+      };
+    });
+  }, [portfolios, extraMeta, tokenMeta]);
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center">
-        <div className="text-white text-xl">Loading portfolio...</div>
+      <div className="min-h-screen p-6 sm:p-8 md:p-12 pb-16" style={{ fontFamily: 'Golos Text, sans-serif' }}>
+        <div className="mx-auto w-full max-w-6xl">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-white text-xl">Loading portfolio...</div>
+          </div>
+        </div>
       </div>
     );
   }
 
-  if (error || !portfolio) {
+  if (error || portfolios.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-white text-xl mb-4">Portfolio Not Found</div>
-          <div className="text-white/60">The portfolio you&apos;re looking for doesn&apos;t exist or has been removed.</div>
+      <div className="min-h-screen p-6 sm:p-8 md:p-12 pb-16" style={{ fontFamily: 'Golos Text, sans-serif' }}>
+        <div className="mx-auto w-full max-w-6xl">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="text-white text-xl mb-4">Portfolio Not Found</div>
+              <div className="text-white/60">The portfolio you&apos;re looking for doesn&apos;t exist or has been removed.</div>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">{portfolio.name}</h1>
-          <p className="text-white/60">Public Portfolio View</p>
-        </div>
-
-        {/* Portfolio Stats */}
-        <div className="bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 p-6 mb-8">
-          <div className="grid grid-cols-3 gap-6 text-center">
-            <div>
-              <div className="text-white/60 text-sm mb-1">Tokens</div>
-              <div className="text-2xl font-bold text-white">{portfolio.rows.length}</div>
-            </div>
-            <div>
-              <div className="text-white/60 text-sm mb-1">Average Market Cap</div>
-              <div className="text-2xl font-bold text-blue-400">
-                {portfolio.rows.length > 0 ? formatMarketCap(
-                  portfolio.rows.reduce((sum, row) => {
-                    const meta = tokenMeta[row.mint];
-                    return sum + (meta?.marketCap || 0);
-                  }, 0) / portfolio.rows.length
-                ) : 'N/A'}
-              </div>
-            </div>
-            <div>
-              <div className="text-white/60 text-sm mb-1">Average 24h Change</div>
-              <div className="text-2xl font-bold text-green-400">
-                {portfolio.rows.length > 0 ? 
-                  `${(portfolio.rows.reduce((sum, row) => {
-                    const meta = tokenMeta[row.mint];
-                    return sum + (meta?.priceChange24h || 0);
-                  }, 0) / portfolio.rows.length).toFixed(2)}%` : 'N/A'}
+    <div className="min-h-screen p-6 sm:p-8 md:p-12 pb-16" style={{ fontFamily: 'Golos Text, sans-serif' }}>
+      <div className="mx-auto w-full max-w-6xl">
+        {/* Header with Logo */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <Logo />
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-white/60">
+                  Shared Portfolio • Read Only
+                </span>
               </div>
             </div>
           </div>
+          
+          {/* Main Header - Similar to "Build your Bags!" */}
+          <h1 className="text-3xl font-semibold mb-2">
+            {portfolios.length > 0 && portfolios[0].username 
+              ? `${portfolios[0].username}'s Portfolio` 
+              : "Shared Portfolio"}
+          </h1>
+          <p className="text-white/60">
+            Viewing a shared portfolio. Sign in to create and edit your own portfolios.
+          </p>
         </div>
 
-        {/* Token List */}
-        <div className="bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 p-6">
-          <h2 className="text-xl font-semibold text-white mb-4">Tokens</h2>
-          <div className="space-y-3">
-            {portfolio.rows.map((row, index) => {
-              const meta = tokenMeta[row.mint];
-              return (
-                <div key={row.mint} className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center text-white/60 text-sm font-bold">
-                      {index + 1}
+        {/* Portfolio List - Read Only Version */}
+        {portfolios.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-white/60 text-lg mb-4">No portfolios to display</div>
+            <a 
+              href="/builder" 
+              className="inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/5 text-white px-4 py-2 text-sm hover:bg-white/10 transition-colors"
+            >
+              Open portfolio builder
+            </a>
+          </div>
+        ) : (
+          portfolios.map((portfolio, portfolioIndex) => {
+            const stats = portfolioStats[portfolioIndex];
+            return (
+              <div key={portfolio.id} className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6 mb-6">
+                {/* Portfolio Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="flex items-center gap-3">
+                      <span className="text-white/60 text-lg">📊</span>
+                      <div>
+                        <h2 className="text-xl font-semibold text-white">{portfolio.name}</h2>
+                        <div className="text-sm text-white/60">
+                          {portfolio.rows.length} token{portfolio.rows.length !== 1 ? 's' : ''}
+                          {stats && (
+                            <>
+                              {' • '}
+                              <span className={stats.avgChange >= 0 ? 'text-green-400' : 'text-red-400'}>
+                                {stats.avgChange >= 0 ? '+' : ''}{stats.avgChange.toFixed(2)}%
+                              </span>
+                              {' • '}
+                              <span className="text-blue-400">
+                                {formatMarketCap(stats.avgMarketCap)} avg mcap
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <TokenImage
-                      src={meta?.logoURI || undefined}
-                      alt={meta?.symbol || "Token"}
-                      className="w-10 h-10 rounded-lg"
-                      fallbackSrc="/placeholder-token.svg"
-                    />
-                    <div>
-                      <div className="text-white font-semibold">
-                        {meta?.symbol || 'Unknown'}
-                      </div>
-                      <div className="text-white/60 text-sm">
-                        {meta?.name || row.mint.slice(0, 8) + '...'}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="text-right">
-                    {meta?.marketCap && (
-                      <div className="text-blue-400 font-semibold">
-                        {formatMarketCap(meta.marketCap)}
-                      </div>
-                    )}
-                    {meta?.priceChange24h !== undefined && (
-                      <div className={`text-sm ${meta.priceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {meta.priceChange24h >= 0 ? '+' : ''}{meta.priceChange24h.toFixed(2)}%
-                      </div>
-                    )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
+
+                {/* Token List - Always Expanded for Shared View */}
+                <div className="space-y-3">
+                  {portfolio.rows.length === 0 ? (
+                    <div className="text-center py-8 text-white/60">
+                      No tokens in this portfolio
+                    </div>
+                  ) : (
+                    portfolio.rows.map((row) => {
+                      // Merge metadata, prioritizing valid logoURI from extraMeta over tokenMeta
+                      const tokenMetaData = tokenMeta[row.mint] || {};
+                      const extraMetaData = extraMeta[row.mint] || {};
+                      const meta = {
+                        ...tokenMetaData,
+                        ...extraMetaData,
+                        // Ensure logoURI from extraMeta takes priority if it's valid
+                        logoURI: extraMetaData.logoURI || tokenMetaData.logoURI
+                      };
+                      console.log('🎨 Rendering TokenImage for', row.mint, 'with meta:', meta);
+                      console.log('🎨 TokenMeta logoURI:', tokenMetaData.logoURI, 'ExtraMeta logoURI:', extraMetaData.logoURI, 'Final logoURI:', meta.logoURI);
+                      return (
+                        <div key={row.mint} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <TokenImage
+                              src={meta?.logoURI || undefined}
+                              alt={meta?.symbol || "Token"}
+                              className="w-8 h-8 rounded-lg"
+                              fallbackSrc="/placeholder-token.svg"
+                            />
+                            <div>
+                              <div className="font-medium text-white">
+                                {meta?.symbol || 'Unknown'}
+                              </div>
+                              <div className="text-sm text-white/60">
+                                {meta?.name || row.mint.slice(0, 8) + '...'}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="text-right">
+                            {meta?.marketCap && (
+                              <div className="text-blue-400 font-semibold text-sm">
+                                {formatMarketCap(meta.marketCap)}
+                              </div>
+                            )}
+                            {meta?.priceChange24h !== undefined && (
+                              <div className={`text-xs ${meta.priceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                {meta.priceChange24h >= 0 ? '+' : ''}{meta.priceChange24h.toFixed(2)}%
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
 
         {/* Footer */}
-        <div className="text-center mt-8 text-white/60">
-          <p>Portfolio shared via onPort</p>
+        <div className="text-center mt-8">
+          <a 
+            href="/builder" 
+            className="inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/5 text-white px-4 py-2 text-sm hover:bg-white/10 transition-colors"
+          >
+            Open portfolio builder
+          </a>
+          <div className="text-white/60 text-sm mt-4">
+            Portfolio shared via <span className="text-white font-semibold">onPort</span>
+          </div>
         </div>
       </div>
     </div>

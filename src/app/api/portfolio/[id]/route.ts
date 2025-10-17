@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { connectToDatabase } from '@/lib/mongodb';
 
 export async function GET(
   request: NextRequest,
@@ -11,14 +12,36 @@ export async function GET(
       return NextResponse.json({ error: 'Portfolio ID required' }, { status: 400 });
     }
 
-    // For now, we'll return a simple response
-    // In a real implementation, you'd fetch from your database
-    // This is a placeholder that will work with the current localStorage approach
-    
-    return NextResponse.json({ 
-      message: 'Portfolio sharing feature coming soon',
-      portfolioId: id 
-    }, { status: 200 });
+    try {
+      const db = await connectToDatabase();
+      if (!db) {
+        return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
+      }
+
+      // Search for the portfolio across all users
+      const users = await db.collection('users').find({}).toArray();
+      
+      for (const user of users) {
+        if (user.portfolios && Array.isArray(user.portfolios)) {
+          const portfolio = user.portfolios.find((p: { id: string }) => p.id === id);
+          if (portfolio) {
+            // Include username with the portfolio data
+            const portfolioWithUser = {
+              ...portfolio,
+              username: user.username || user.name || 'Anonymous'
+            };
+            return NextResponse.json(portfolioWithUser, { status: 200 });
+          }
+        }
+      }
+
+      // Portfolio not found
+      return NextResponse.json({ error: 'Portfolio not found' }, { status: 404 });
+
+    } catch (dbError) {
+      console.error('Database error:', dbError);
+      return NextResponse.json({ error: 'Database error' }, { status: 500 });
+    }
 
   } catch (error) {
     console.error('Error fetching public portfolio:', error);
