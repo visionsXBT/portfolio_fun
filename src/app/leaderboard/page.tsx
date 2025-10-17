@@ -32,7 +32,7 @@ export default function LeaderboardPage() {
     mostDiverse: []
   });
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'shared' | 'performing' | 'diverse'>('shared');
+  const [activeTab, setActiveTab] = useState<'mostShared' | 'bestPerforming' | 'mostDiverse'>('mostShared');
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,
@@ -64,9 +64,6 @@ export default function LeaderboardPage() {
     return bnbAddressRegex.test(value);
   }
 
-  function isValidTokenAddress(value: string): boolean {
-    return isValidMint(value) || isValidBNBAddress(value);
-  }
 
   // Load user account from database (no localStorage dependency)
   useEffect(() => {
@@ -356,9 +353,9 @@ export default function LeaderboardPage() {
   };
 
   const tabs = [
-    { id: 'shared', label: 'Most Shared', data: leaderboardData.mostShared },
-    { id: 'performing', label: 'Best Performing', data: leaderboardData.bestPerforming, description: 'Balanced: 70% 24h change + 30% market cap' },
-    { id: 'diverse', label: 'Most Diverse', data: leaderboardData.mostDiverse }
+    { id: 'mostShared', label: 'Most Shared', data: leaderboardData.mostShared },
+    { id: 'bestPerforming', label: 'Best Performing', data: leaderboardData.bestPerforming },
+    { id: 'mostDiverse', label: 'Most Diverse', data: leaderboardData.mostDiverse }
   ];
 
   const currentTab = tabs.find(tab => tab.id === activeTab);
@@ -447,7 +444,7 @@ export default function LeaderboardPage() {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as 'mostShared' | 'bestPerforming' | 'mostDiverse')}
               className={`flex-1 py-3 px-4 rounded-md text-sm font-medium transition-colors ${
                 activeTab === tab.id
                   ? 'bg-[var(--brand-end)] text-white'
@@ -456,9 +453,6 @@ export default function LeaderboardPage() {
             >
               <div className="text-center">
                 <div>{tab.label}</div>
-                {tab.description && (
-                  <div className="text-xs text-white/40 mt-1">{tab.description}</div>
-                )}
               </div>
             </button>
           ))}
@@ -500,13 +494,13 @@ export default function LeaderboardPage() {
                       
                       <div className="flex items-center gap-4 text-sm text-white/60">
                         <span>by {portfolio.username}</span>
-                        {activeTab === 'shared' && (
+                        {activeTab === 'mostShared' && (
                           <>
                             <span>{portfolio.shares} shares</span>
                             <span>{portfolio.views} views</span>
                           </>
                         )}
-                        {activeTab === 'performing' && (
+                        {activeTab === 'bestPerforming' && (
                           <>
                             <span className={portfolio.avgChange >= 0 ? 'text-green-400' : 'text-red-400'}>
                               {portfolio.avgChange >= 0 ? '+' : ''}{portfolio.avgChange.toFixed(2)}%
@@ -514,12 +508,9 @@ export default function LeaderboardPage() {
                             <span className="text-blue-400">
                               ${formatMarketCap(portfolio.avgMarketCap)} Avg MCap
                             </span>
-                            <span className="text-xs text-white/40">
-                              (Balanced Score)
-                            </span>
                           </>
                         )}
-                        {activeTab === 'diverse' && (
+                        {activeTab === 'mostDiverse' && (
                           <>
                             <span>{portfolio.tokenCount} tokens</span>
                             <span className="text-blue-400">
@@ -531,7 +522,7 @@ export default function LeaderboardPage() {
                     </div>
                     
                     <div className="flex items-center gap-3">
-                      {index === 0 && activeTab === 'shared' && (
+                      {index === 0 && activeTab === 'mostShared' && (
                         <div className="flex items-center gap-1 text-yellow-400">
                           <span className="text-lg">👑</span>
                           <span className="text-sm font-medium">Weekly Leader</span>

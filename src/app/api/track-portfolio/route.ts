@@ -17,14 +17,12 @@ export async function POST(request: NextRequest) {
     // Find the portfolio across all users
     const users = await db.collection('users').find({}).toArray();
     let portfolioFound = false;
-    let portfolioOwner = null;
 
     for (const user of users) {
       if (user.portfolios && Array.isArray(user.portfolios)) {
         const portfolioIndex = user.portfolios.findIndex((p: { id: string }) => p.id === portfolioId);
         if (portfolioIndex !== -1) {
           portfolioFound = true;
-          portfolioOwner = user;
           
           // Update portfolio stats
           const portfolio = user.portfolios[portfolioIndex];
@@ -42,7 +40,8 @@ export async function POST(request: NextRequest) {
 
           // Handle referral rewards if this is a view and there's a referrer
           if (action === 'view' && referrerId && referrerId !== user._id?.toString()) {
-            await handleReferralReward(db, referrerId, user._id?.toString());
+            console.log(`Referral: Portfolio ${portfolioId} viewed by someone referred by ${referrerId}`);
+            // TODO: Implement referral rewards
           }
 
           break;
@@ -62,36 +61,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleReferralReward(db: any, referrerId: string, newUserId: string) {
-  try {
-    // Find the referrer
-    const referrer = await db.collection('users').findOne({ _id: referrerId });
-    if (!referrer) return;
-
-    // Initialize referral stats if they don't exist
-    if (!referrer.referralStats) {
-      referrer.referralStats = {
-        totalReferrals: 0,
-        activeReferrals: 0,
-        totalRewards: 0
-      };
-    }
-
-    // Increment total referrals
-    referrer.referralStats.totalReferrals += 1;
-
-    // Give referral reward (you can adjust this amount)
-    const rewardAmount = 10; // Points or tokens
-    referrer.referralStats.totalRewards += rewardAmount;
-
-    // Update referrer in database
-    await db.collection('users').updateOne(
-      { _id: referrerId },
-      { $set: { referralStats: referrer.referralStats } }
-    );
-
-    console.log(`Referral reward given: ${rewardAmount} points to user ${referrerId} for referring ${newUserId}`);
-  } catch (error) {
-    console.error('Error handling referral reward:', error);
-  }
-}

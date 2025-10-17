@@ -17,7 +17,6 @@ export async function POST(request: NextRequest) {
 
     // Generate a unique filename
     const timestamp = Date.now();
-    const filename = `profile_${userId}_${timestamp}.jpg`;
     
     // For now, we'll store the base64 data directly in the database
     // In production, you'd want to upload to a cloud storage service like AWS S3

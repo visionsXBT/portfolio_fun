@@ -466,11 +466,30 @@ export default function BuilderPageContent() {
     ));
   }, []);
 
-  const updatePortfolioName = useCallback((portfolioId: string, name: string) => {
+  const updatePortfolioName = useCallback(async (portfolioId: string, name: string) => {
+    // Update local state
     setPortfolios((prev) => prev.map((p) => 
       p.id === portfolioId ? { ...p, name } : p
     ));
-  }, []);
+
+    // Save to database if user is logged in
+    if (userAccount?.id) {
+      try {
+        const updatedPortfolios = portfolios.map((p) => 
+          p.id === portfolioId ? { ...p, name } : p
+        );
+        
+        await fetch(`/api/user/${userAccount.id}/portfolios`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ portfolios: updatedPortfolios })
+        });
+        console.log('✅ Portfolio name updated in database');
+      } catch (error) {
+        console.error('❌ Failed to save portfolio name:', error);
+      }
+    }
+  }, [portfolios, userAccount]);
 
   // Dedicated function for pump.fun image fetching
   const fetchPumpFunImages = useCallback(async (mint: string): Promise<string | null> => {

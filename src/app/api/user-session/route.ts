@@ -24,12 +24,7 @@ export async function GET(request: NextRequest) {
     try {
       user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
     } catch {
-      // If ObjectId fails, try with string ID
-      user = await db.collection('users').findOne({ _id: userId });
-    }
-
-    // If still not found, try with id field (not _id)
-    if (!user) {
+      // If ObjectId fails, try with id field (not _id)
       user = await db.collection('users').findOne({ id: userId });
     }
 

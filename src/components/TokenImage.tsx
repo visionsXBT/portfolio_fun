@@ -18,7 +18,6 @@ export default function TokenImage({
   console.log('🖼️ TokenImage rendered with src:', src, 'alt:', alt);
   
   const [imgSrc, setImgSrc] = useState<string | null>(null);
-  const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
@@ -30,14 +29,12 @@ export default function TokenImage({
       console.log('🔄 Retrying image load...');
       setRetryCount(prev => prev + 1);
       setIsLoading(true);
-      setHasError(false);
       // Force a fresh request by adding a small delay and updating the src
       setTimeout(() => {
         setImgSrc(prev => prev ? `${prev}${prev.includes('?') ? '&' : '?'}retry=${retryCount + 1}` : prev);
       }, 100);
     } else {
       // Give up and use fallback
-      setHasError(true);
       setIsLoading(false);
       setImgSrc(fallbackSrc);
     }
@@ -46,7 +43,6 @@ export default function TokenImage({
   const handleLoad = useCallback(() => {
     console.log('✅ Image loaded successfully:', imgSrc);
     setIsLoading(false);
-    setHasError(false);
     setRetryCount(0); // Reset retry count on successful load
   }, [imgSrc]);
 
@@ -67,14 +63,12 @@ export default function TokenImage({
       
       // Always set loading state and reset error when src changes
       setIsLoading(true);
-      setHasError(false);
       setRetryCount(0);
       setImgSrc(proxiedSrc);
     } else {
       console.log('🔄 TokenImage src is empty, using fallback');
       setImgSrc(fallbackSrc);
       setIsLoading(false);
-      setHasError(false);
       setRetryCount(0);
     }
   }, [src, fallbackSrc, getProxiedUrl]);

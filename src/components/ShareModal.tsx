@@ -62,29 +62,6 @@ export default function ShareModal({ isOpen, onClose, portfolio, portfolioStats,
     document.body.removeChild(link);
   };
 
-  const copyImageToClipboard = async () => {
-    if (!generatedImage) return;
-    
-    try {
-      // Convert data URL to blob
-      const response = await fetch(generatedImage);
-      const blob = await response.blob();
-      
-      // Copy to clipboard
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          [blob.type]: blob
-        })
-      ]);
-      
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error('Failed to copy image:', error);
-      // Fallback: download the image
-      downloadImage();
-    }
-  };
 
   const handleOpen = () => {
     generateShareLink();

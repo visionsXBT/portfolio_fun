@@ -4,10 +4,10 @@ import { ObjectId } from 'mongodb';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const { userId } = params;
+    const { userId } = await params;
     
     if (!userId) {
       return NextResponse.json({ error: 'User ID required' }, { status: 400 });
@@ -25,12 +25,7 @@ export async function GET(
     try {
       user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
     } catch {
-      // If ObjectId fails, try with string ID
-      user = await db.collection('users').findOne({ _id: userId });
-    }
-
-    // If still not found, try with id field (not _id)
-    if (!user) {
+      // If ObjectId fails, try with id field (not _id)
       user = await db.collection('users').findOne({ id: userId });
     }
 
