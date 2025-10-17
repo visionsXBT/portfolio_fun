@@ -272,9 +272,9 @@ export default function BuilderPageContent() {
     localStorage.setItem('userAccount', JSON.stringify(userData));
     setShowAccountModal(false);
     
-    // Create first portfolio after account creation
-    const newId = "1";
-    setPortfolios([{ id: newId, name: `Portfolio ${newId}`, rows: [], isExpanded: true }]);
+    // Create first portfolio after account creation with unique ID
+    const newId = Date.now().toString();
+    setPortfolios([{ id: newId, name: `Portfolio 1`, rows: [], isExpanded: true }]);
     setHasLoadedUserPortfolios(true);
   }, []);
 
@@ -292,20 +292,20 @@ export default function BuilderPageContent() {
         if (userPortfolios.portfolios && userPortfolios.portfolios.length > 0) {
           setPortfolios(userPortfolios.portfolios);
         } else {
-          // Create first portfolio if none exist
-          const newId = "1";
-          setPortfolios([{ id: newId, name: `Portfolio ${newId}`, rows: [], isExpanded: true }]);
+          // Create first portfolio if none exist with unique ID
+          const newId = Date.now().toString();
+          setPortfolios([{ id: newId, name: `Portfolio 1`, rows: [], isExpanded: true }]);
         }
       } else {
-        // Fallback: create default portfolio
-        const newId = "1";
-        setPortfolios([{ id: newId, name: `Portfolio ${newId}`, rows: [], isExpanded: true }]);
+        // Fallback: create default portfolio with unique ID
+        const newId = Date.now().toString();
+        setPortfolios([{ id: newId, name: `Portfolio 1`, rows: [], isExpanded: true }]);
       }
     } catch (error) {
       console.warn('Failed to load portfolios:', error);
-      // Fallback: create default portfolio
-      const newId = "1";
-      setPortfolios([{ id: newId, name: `Portfolio ${newId}`, rows: [], isExpanded: true }]);
+      // Fallback: create default portfolio with unique ID
+      const newId = Date.now().toString();
+      setPortfolios([{ id: newId, name: `Portfolio 1`, rows: [], isExpanded: true }]);
     } finally {
       setHasLoadedUserPortfolios(true);
     }
