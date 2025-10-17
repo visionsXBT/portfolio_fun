@@ -2,7 +2,6 @@ import { MongoClient, Db } from 'mongodb';
 
 let client: MongoClient;
 let db: Db;
-let connectionAttempted = false;
 
 export async function connectToDatabase(): Promise<Db> {
   if (db) {
@@ -16,12 +15,6 @@ export async function connectToDatabase(): Promise<Db> {
   if (!uri) {
     throw new Error('MONGODB_URI environment variable is required');
   }
-
-  // Prevent multiple connection attempts
-  if (connectionAttempted) {
-    throw new Error('MongoDB connection already attempted');
-  }
-  connectionAttempted = true;
 
   try {
     console.log('Attempting to connect to MongoDB...');
