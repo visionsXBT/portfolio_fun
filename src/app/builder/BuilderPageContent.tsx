@@ -9,6 +9,7 @@ import AccountModal from "@/components/AccountModal";
 import SignInModal from "@/components/SignInModal";
 import TokenImage from "@/components/TokenImage";
 import ShareModal from "@/components/ShareModal";
+import ProfilePictureUpload from "@/components/ProfilePictureUpload";
 
 type PortfolioRow = {
   mint: string;
@@ -19,6 +20,10 @@ type Portfolio = {
   name: string;
   rows: PortfolioRow[];
   isExpanded: boolean;
+  avgMarketCap?: number;
+  avgChange?: number;
+  views?: number;
+  shares?: number;
 };
 
 function isValidMint(value: string): boolean {
@@ -142,26 +147,41 @@ export default function BuilderPageContent() {
     walletAddress?: string;
     id: string; 
     accountType: 'email' | 'wallet';
+    profilePicture?: string;
   } | null>(null);
   const [isSharedPortfolio, setIsSharedPortfolio] = useState(false);
   const [hasLoadedUserPortfolios, setHasLoadedUserPortfolios] = useState(false);
 
-  // Load user account and portfolios from localStorage on page load (run first)
+  // Load user account and portfolios from database (database-first approach)
   useEffect(() => {
-    const savedUserAccount = localStorage.getItem('userAccount');
-    if (savedUserAccount) {
-      try {
-        const userData = JSON.parse(savedUserAccount);
-        console.log('👤 Loading user from localStorage:', userData.username);
-        setUserAccount(userData);
-        
-        // Load portfolios from database
-        const loadPortfolios = async () => {
-          try {
-            console.log('📂 Loading portfolios for user:', userData.id);
-            const response = await fetch(`/api/user/${userData.id}/portfolios`);
-            if (response.ok) {
-              const userPortfolios = await response.json();
+    const loadUserData = async () => {
+      const savedUserAccount = localStorage.getItem('userAccount');
+      if (savedUserAccount) {
+        try {
+          const userData = JSON.parse(savedUserAccount);
+          console.log('👤 Found user ID in localStorage, fetching from database:', userData.id);
+          
+          // Fetch fresh user data from database
+          const userResponse = await fetch(`/api/user/${userData.id}`);
+          if (userResponse.ok) {
+            const updatedUserData = await userResponse.json();
+            console.log('👤 Loaded updated user data from database:', updatedUserData);
+            
+            // Use updated user data (includes latest profile picture)
+            setUserAccount(updatedUserData);
+            localStorage.setItem('userAccount', JSON.stringify(updatedUserData));
+            
+            // Load portfolios from database
+            const loadPortfolios = async () => {
+              try {
+                console.log('📂 Loading portfolios for user:', updatedUserData.id);
+                const response = await fetch(`/api/user/${updatedUserData.id}/portfolios`);
+                console.log('📂 Portfolio fetch response status:', response.status);
+            
+                if (response.ok) {
+                  const userPortfolios = await response.json();
+                  console.log('📂 Portfolio response data:', userPortfolios);
+              
               if (userPortfolios.portfolios && userPortfolios.portfolios.length > 0) {
                 console.log('📂 Loaded portfolios from database:', userPortfolios.portfolios.length);
                 setPortfolios(userPortfolios.portfolios);
@@ -223,6 +243,8 @@ export default function BuilderPageContent() {
               }
             } else {
               console.log('📂 Failed to load portfolios from database:', response.status);
+              const errorData = await response.json().catch(() => ({}));
+              console.log('📂 Error details:', errorData);
             }
           } catch (error) {
             console.warn('Failed to load portfolios on page refresh:', error);
@@ -231,16 +253,23 @@ export default function BuilderPageContent() {
           }
         };
         
-        loadPortfolios();
-      } catch (error) {
-        console.warn('Failed to parse saved user account:', error);
-        localStorage.removeItem('userAccount');
-        setHasLoadedUserPortfolios(true);
+            loadPortfolios();
+          } else {
+            console.log('👤 User not found in database, clearing localStorage');
+            localStorage.removeItem('userAccount');
+            setUserAccount(null);
+          }
+        } catch (error) {
+          console.error('Failed to load user account:', error);
+          setUserAccount(null);
+        }
+      } else {
+        console.log('👤 No user account found in localStorage');
+        setUserAccount(null);
       }
-    } else {
-      console.log('👤 No saved user account found');
-      setHasLoadedUserPortfolios(true);
-    }
+    };
+    
+    loadUserData();
   }, []);
 
   // Hydrate from query param if present (only if no user portfolios loaded)
@@ -266,7 +295,7 @@ export default function BuilderPageContent() {
     ]);
   }, []);
 
-  const handleCreateAccount = useCallback((username: string, userId: string) => {
+  const handleCreateAccount = useCallback(async (username: string, userId: string) => {
     const userData = { username, id: userId, accountType: 'email' as const };
     setUserAccount(userData);
     localStorage.setItem('userAccount', JSON.stringify(userData));
@@ -274,14 +303,48 @@ export default function BuilderPageContent() {
     
     // Create first portfolio after account creation with unique ID
     const newId = Date.now().toString();
-    setPortfolios([{ id: newId, name: `Portfolio 1`, rows: [], isExpanded: true }]);
+    const initialPortfolio = { id: newId, name: `Portfolio 1`, rows: [], isExpanded: true, views: 0, shares: 0, avgChange: 0, avgMarketCap: 0 };
+    setPortfolios([initialPortfolio]);
     setHasLoadedUserPortfolios(true);
+    
+    // Immediately save the initial portfolio to database
+    try {
+      await fetch(`/api/user/${userId}/portfolios`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ portfolios: [initialPortfolio] })
+      });
+      console.log('✅ Initial portfolio saved to database');
+    } catch (error) {
+      console.warn('Failed to save initial portfolio:', error);
+    }
   }, []);
 
   const handleSignIn = useCallback(async (username: string, userId: string) => {
-    const userData = { username, id: userId, accountType: 'email' as const };
-    setUserAccount(userData);
-    localStorage.setItem('userAccount', JSON.stringify(userData));
+    // First fetch user data from database to get profile picture
+    try {
+      const userResponse = await fetch(`/api/user/${userId}`);
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        console.log('👤 Loaded user data from database:', userData);
+        
+        // Use the user data from database (includes profile picture)
+        setUserAccount(userData);
+        localStorage.setItem('userAccount', JSON.stringify(userData));
+      } else {
+        // Fallback to basic user data if fetch fails
+        const userData = { username, id: userId, accountType: 'email' as const };
+        setUserAccount(userData);
+        localStorage.setItem('userAccount', JSON.stringify(userData));
+      }
+    } catch (error) {
+      console.warn('Failed to fetch user data, using basic data:', error);
+      // Fallback to basic user data if fetch fails
+      const userData = { username, id: userId, accountType: 'email' as const };
+      setUserAccount(userData);
+      localStorage.setItem('userAccount', JSON.stringify(userData));
+    }
+    
     setShowSignInModal(false);
     
     // Load user's portfolios from database
@@ -294,22 +357,69 @@ export default function BuilderPageContent() {
         } else {
           // Create first portfolio if none exist with unique ID
           const newId = Date.now().toString();
-          setPortfolios([{ id: newId, name: `Portfolio 1`, rows: [], isExpanded: true }]);
+          const initialPortfolio = { id: newId, name: `Portfolio 1`, rows: [], isExpanded: true, views: 0, shares: 0, avgChange: 0, avgMarketCap: 0 };
+          setPortfolios([initialPortfolio]);
+          
+          // Save the initial portfolio to database
+          try {
+            await fetch(`/api/user/${userId}/portfolios`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ portfolios: [initialPortfolio] })
+            });
+            console.log('✅ Initial portfolio saved to database');
+          } catch (error) {
+            console.warn('Failed to save initial portfolio:', error);
+          }
         }
       } else {
         // Fallback: create default portfolio with unique ID
         const newId = Date.now().toString();
-        setPortfolios([{ id: newId, name: `Portfolio 1`, rows: [], isExpanded: true }]);
+        const initialPortfolio = { id: newId, name: `Portfolio 1`, rows: [], isExpanded: true, views: 0, shares: 0, avgChange: 0, avgMarketCap: 0 };
+        setPortfolios([initialPortfolio]);
+        
+        // Save the initial portfolio to database
+        try {
+          await fetch(`/api/user/${userId}/portfolios`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ portfolios: [initialPortfolio] })
+          });
+          console.log('✅ Initial portfolio saved to database');
+        } catch (error) {
+          console.warn('Failed to save initial portfolio:', error);
+        }
       }
     } catch (error) {
       console.warn('Failed to load portfolios:', error);
       // Fallback: create default portfolio with unique ID
       const newId = Date.now().toString();
-      setPortfolios([{ id: newId, name: `Portfolio 1`, rows: [], isExpanded: true }]);
+      const initialPortfolio = { id: newId, name: `Portfolio 1`, rows: [], isExpanded: true, views: 0, shares: 0, avgChange: 0, avgMarketCap: 0 };
+      setPortfolios([initialPortfolio]);
+      
+      // Save the initial portfolio to database
+      try {
+        await fetch(`/api/user/${userId}/portfolios`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ portfolios: [initialPortfolio] })
+        });
+        console.log('✅ Initial portfolio saved to database');
+      } catch (error) {
+        console.warn('Failed to save initial portfolio:', error);
+      }
     } finally {
       setHasLoadedUserPortfolios(true);
     }
   }, []);
+
+  const handleProfilePictureChange = useCallback((imageUrl: string | null) => {
+    if (userAccount) {
+      const updatedUser = { ...userAccount, profilePicture: imageUrl || undefined };
+      setUserAccount(updatedUser);
+      localStorage.setItem('userAccount', JSON.stringify(updatedUser));
+    }
+  }, [userAccount]);
 
   const handleLogout = useCallback(() => {
     console.log('🚪 Logging out user...');
@@ -785,11 +895,15 @@ export default function BuilderPageContent() {
     }
 
     // Add the token immediately
-    setPortfolios((prev) => prev.map((p) =>
-      p.id === portfolioId
-        ? { ...p, rows: [...p.rows, { mint }] }
-        : p
-    ));
+    setPortfolios((prev) => {
+      const updated = prev.map((p) =>
+        p.id === portfolioId
+          ? { ...p, rows: [...p.rows, { mint }] }
+          : p
+      );
+      console.log('➕ Updated portfolios after adding token:', updated);
+      return updated;
+    });
 
     // Fetch metadata from DexScreener and image from pump.fun separately
     try {
@@ -965,7 +1079,58 @@ export default function BuilderPageContent() {
     }
 
     setPortfolioInputs(prev => ({ ...prev, [portfolioId]: "" }));
-  }, [portfolioInputs, fetchPumpFunImages, fetchBNBTokenImage, portfolios]);
+    console.log('✅ Token added successfully, input cleared');
+    
+    // Save portfolio immediately after adding token
+    if (userAccount) {
+      try {
+        console.log('💾 Saving portfolio immediately after adding token');
+        // Get the updated portfolios state
+        const updatedPortfolios = portfolios.map(p =>
+          p.id === portfolioId
+            ? { ...p, rows: [...p.rows, { mint }] }
+            : p
+        );
+        
+        const portfoliosWithStats = updatedPortfolios.map(portfolio => {
+          const portfolioMints = portfolio.rows.map(r => r.mint);
+          
+          const portfolioChanges = portfolioMints.map(mint => {
+            const meta = extraMeta[mint] || tokenMeta[mint];
+            return meta?.priceChange24h || priceChanges24h[mint] || 0;
+          });
+          const avgChange = portfolioChanges.length > 0 
+            ? portfolioChanges.reduce((sum, change) => sum + change, 0) / portfolioChanges.length 
+            : 0;
+          
+          const portfolioMarketCaps = portfolioMints.map(mint => {
+            const meta = extraMeta[mint] || tokenMeta[mint];
+            return meta?.marketCap || marketCaps[mint] || 0;
+          });
+          const avgMarketCap = portfolioMarketCaps.length > 0 
+            ? portfolioMarketCaps.reduce((sum, marketCap) => sum + marketCap, 0) / portfolioMarketCaps.length 
+            : 0;
+          
+          return {
+            ...portfolio,
+            avgChange,
+            avgMarketCap,
+            views: portfolio.views || 0,
+            shares: portfolio.shares || 0
+          };
+        });
+
+        await fetch(`/api/user/${userAccount.id}/portfolios`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ portfolios: portfoliosWithStats })
+        });
+        console.log('✅ Portfolio saved immediately after adding token');
+      } catch (error) {
+        console.error('❌ Failed to save portfolio after adding token:', error);
+      }
+    }
+  }, [portfolioInputs, fetchPumpFunImages, fetchBNBTokenImage, portfolios, userAccount, extraMeta, tokenMeta, priceChanges24h, marketCaps]);
 
   const removeRow = useCallback((portfolioId: string, mint: string) => {
     setPortfolios((prev) => prev.map((p) => 
@@ -982,6 +1147,7 @@ export default function BuilderPageContent() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [portfolios, pathname]);
+
 
   // Fetch token metadata and prices
   useEffect(() => {
@@ -1126,26 +1292,63 @@ export default function BuilderPageContent() {
   }, [portfolios, tokenMeta, extraMeta, fetchPumpFunImages, fetchBNBTokenImage, scrapeFourMemeImage, hasLoadedUserPortfolios]);
 
   // Save portfolios to database when they change
+  // DISABLED: Now handled directly in addRow function to prevent infinite loops
+  /*
   useEffect(() => {
-    if (userAccount) {
+    if (userAccount && portfolios.length > 0) {
       const savePortfolios = async () => {
+        console.log('💾 Save portfolios triggered, portfolios count:', portfolios.length);
+        console.log('💾 Portfolio details:', portfolios.map(p => ({ id: p.id, name: p.name, tokenCount: p.rows.length })));
         try {
+          // Calculate stats for each portfolio before saving
+          const portfoliosWithStats = portfolios.map(portfolio => {
+            const portfolioMints = portfolio.rows.map(r => r.mint);
+            
+            // Calculate average change
+            const portfolioChanges = portfolioMints.map(mint => {
+              const meta = extraMeta[mint] || tokenMeta[mint];
+              return meta?.priceChange24h || priceChanges24h[mint] || 0;
+            });
+            const avgChange = portfolioChanges.length > 0 
+              ? portfolioChanges.reduce((sum, change) => sum + change, 0) / portfolioChanges.length 
+              : 0;
+            
+            // Calculate average market cap
+            const portfolioMarketCaps = portfolioMints.map(mint => {
+              const meta = extraMeta[mint] || tokenMeta[mint];
+              return meta?.marketCap || marketCaps[mint] || 0;
+            });
+            const avgMarketCap = portfolioMarketCaps.length > 0 
+              ? portfolioMarketCaps.reduce((sum, marketCap) => sum + marketCap, 0) / portfolioMarketCaps.length 
+              : 0;
+            
+            return {
+              ...portfolio,
+              avgChange,
+              avgMarketCap,
+              views: portfolio.views || 0,
+              shares: portfolio.shares || 0
+            };
+          });
+
           await fetch(`/api/user/${userAccount.id}/portfolios`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ portfolios })
+            body: JSON.stringify({ portfolios: portfoliosWithStats })
           });
-          console.log('✅ Portfolios saved to database:', portfolios.length);
+          console.log('✅ Portfolios saved to database with stats:', portfoliosWithStats.length);
         } catch (error) {
           console.warn('Failed to save portfolios:', error);
+          console.warn('User ID:', userAccount.id);
+          console.warn('Portfolios to save:', portfolios);
         }
       };
       
-      // Debounce saves to avoid too many API calls
-      const timeoutId = setTimeout(savePortfolios, 1000);
-      return () => clearTimeout(timeoutId);
+      // Save immediately when portfolios change
+      savePortfolios();
     }
-  }, [portfolios, userAccount]);
+  }, [portfolios, userAccount, extraMeta, tokenMeta, priceChanges24h, marketCaps]);
+  */
 
 
   const portfolioStats = useMemo(() => {
@@ -1204,7 +1407,7 @@ export default function BuilderPageContent() {
                   </button>
                 </div>
               )}
-              <Link href="/" className="text-sm text-white/60 hover:text-white">← Home </Link>
+              <Link href="/leaderboard" className="gradient-button px-4 py-2 text-sm text-white rounded-md">🏆 Leaderboard</Link>
             </div>
           </div>
           <h1 className="text-3xl font-semibold mb-2">
@@ -1217,6 +1420,56 @@ export default function BuilderPageContent() {
             }
           </p>
         </div>
+
+        {/* User Profile Section */}
+        {userAccount && !isSharedPortfolio && (
+          <div className="mb-8 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <ProfilePictureUpload
+                  currentImage={userAccount.profilePicture}
+                  onImageChange={handleProfilePictureChange}
+                  userId={userAccount.id}
+                  usernameInitial={userAccount.username?.charAt(0).toUpperCase() || 'U'}
+                />
+                <div>
+                  <h2 className="text-xl font-semibold text-white">
+                    {userAccount.accountType === 'wallet' 
+                      ? `Wallet User`
+                      : userAccount.username
+                    }
+                  </h2>
+                  <p className="text-white/60">
+                    {userAccount.accountType === 'wallet' 
+                      ? `${userAccount.walletAddress?.slice(0, 6)}...${userAccount.walletAddress?.slice(-4)}`
+                      : 'Portfolio Creator'
+                    }
+                  </p>
+                  <div className="flex items-center gap-4 mt-2 text-sm text-white/60">
+                    <span>{portfolios.length} portfolios</span>
+                    <span>{portfolios.reduce((total, p) => total + p.rows.length, 0)} tokens</span>
+                    <span className="text-green-400">Active</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/leaderboard"
+                  className="rounded-md border border-white/20 bg-white/5 hover:bg-white/10 px-4 py-2 text-sm text-white transition-colors"
+                >
+                  🏆 Leaderboard
+                </Link>
+                <button
+                  onClick={() => handleSharePortfolio(portfolios[0])}
+                  disabled={portfolios.length === 0}
+                  className="rounded-md gradient-button px-4 py-2 text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Share Profile
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {portfolios.length === 0 ? (
           <div className="text-center py-16">
@@ -1235,7 +1488,7 @@ export default function BuilderPageContent() {
                   <>
                     <button
                       onClick={() => setShowSignInModal(true)}
-                      className="rounded-lg bg-[var(--brand-end)] hover:bg-[var(--brand-start)] px-8 py-4 text-lg font-medium text-white transition-colors"
+                      className="rounded-lg gradient-button px-8 py-4 text-lg font-medium text-white"
                     >
                       Sign In
                     </button>
@@ -1249,7 +1502,7 @@ export default function BuilderPageContent() {
                 ) : (
                   <button
                     onClick={handleCreatePortfolio}
-                    className="rounded-lg bg-[var(--brand-end)] hover:bg-[var(--brand-start)] px-8 py-4 text-lg font-medium text-white transition-colors"
+                    className="rounded-lg gradient-button px-8 py-4 text-lg font-medium text-white"
                   >
                     Create Portfolio
                   </button>
@@ -1400,7 +1653,7 @@ export default function BuilderPageContent() {
                           <button
                             onClick={() => addRow(portfolio.id)}
                             disabled={!extractMintFromInput(portfolioInputs[portfolio.id] || "")}
-                            className="rounded-md bg-[var(--brand-end)] hover:bg-[var(--brand-start)] px-4 py-2 text-sm text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="rounded-md gradient-button px-4 py-2 text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             Add Token
                           </button>
@@ -1480,7 +1733,7 @@ export default function BuilderPageContent() {
             </button>
             <button
               onClick={copyShare}
-              className="rounded-md bg-[var(--brand-end)] hover:bg-[var(--brand-start)] px-6 py-3 text-sm text-white"
+              className="rounded-md gradient-button px-6 py-3 text-sm text-white"
             >
               {copied ? "Copied!" : "Copy all portfolios"}
             </button>
@@ -1520,6 +1773,7 @@ export default function BuilderPageContent() {
           }}
           tokenMeta={tokenMeta}
           extraMeta={extraMeta}
+          userId={userAccount?.id}
         />
       )}
     </div>

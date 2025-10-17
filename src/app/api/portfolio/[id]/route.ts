@@ -25,10 +25,11 @@ export async function GET(
         if (user.portfolios && Array.isArray(user.portfolios)) {
           const portfolio = user.portfolios.find((p: { id: string }) => p.id === id);
           if (portfolio) {
-            // Include username with the portfolio data
+            // Include username and profile picture with the portfolio data
             const portfolioWithUser = {
               ...portfolio,
-              username: user.username || user.name || 'Anonymous'
+              username: user.username || user.name || 'Anonymous',
+              profilePicture: user.profilePicture
             };
             return NextResponse.json(portfolioWithUser, { status: 200 });
           }

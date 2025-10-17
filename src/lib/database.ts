@@ -7,6 +7,10 @@ export interface Portfolio {
   name: string;
   rows: Array<{ mint: string }>;
   isExpanded: boolean;
+  avgMarketCap?: number;
+  avgChange?: number;
+  views?: number;
+  shares?: number;
 }
 
 export interface UserAccount {
@@ -132,9 +136,13 @@ export async function getUserById(id: string): Promise<UserAccount | null> {
     // Try ObjectId first, then string
     let user = null;
     try {
+      console.log('🔍 Trying ObjectId lookup for:', id);
       user = await users.findOne({ _id: new ObjectId(id) });
-    } catch {
+      console.log('🔍 ObjectId lookup result:', user ? 'Found' : 'Not found');
+    } catch (error) {
+      console.log('🔍 ObjectId failed, trying string:', error);
       user = await users.findOne({ _id: id });
+      console.log('🔍 String lookup result:', user ? 'Found' : 'Not found');
     }
     
     if (!user) {
@@ -142,7 +150,8 @@ export async function getUserById(id: string): Promise<UserAccount | null> {
       return null;
     }
     
-    console.log('✅ User found');
+    console.log('✅ User found:', user.username || user.walletAddress);
+    console.log('✅ User portfolios count:', user.portfolios?.length || 0);
     return user;
   } catch (error) {
     console.error('❌ Error getting user by ID:', error);
@@ -153,6 +162,7 @@ export async function getUserById(id: string): Promise<UserAccount | null> {
 // Update user portfolios
 export async function updateUserPortfolios(userId: string, portfolios: Portfolio[]): Promise<void> {
   console.log('💾 Updating portfolios for user:', userId);
+  console.log('💾 Portfolios to save:', portfolios.length);
   
   try {
     const db = await connectToDatabase();
@@ -161,22 +171,27 @@ export async function updateUserPortfolios(userId: string, portfolios: Portfolio
     // Try ObjectId first, then string
     let result = null;
     try {
+      console.log('💾 Trying ObjectId update for:', userId);
       result = await users.updateOne(
         { _id: new ObjectId(userId) },
         { $set: { portfolios } }
       );
-    } catch {
+      console.log('💾 ObjectId update result:', result);
+    } catch (error) {
+      console.log('💾 ObjectId failed, trying string:', error);
       result = await users.updateOne(
         { _id: userId },
         { $set: { portfolios } }
       );
+      console.log('💾 String update result:', result);
     }
     
     if (result.matchedCount === 0) {
+      console.error('❌ User not found with ID:', userId);
       throw new Error('User not found');
     }
     
-    console.log('✅ Portfolios updated successfully');
+    console.log('✅ Portfolios updated successfully, modified count:', result.modifiedCount);
   } catch (error) {
     console.error('❌ Error updating portfolios:', error);
     throw error;

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import { PublicKey } from '@solana/web3.js';
 import Logo from '@/components/Logo';
 import TokenImage from '@/components/TokenImage';
@@ -16,6 +17,7 @@ interface Portfolio {
   rows: PortfolioRow[];
   isExpanded: boolean;
   username?: string;
+  profilePicture?: string;
 }
 
 interface TokenMeta {
@@ -325,6 +327,9 @@ export default function PublicPortfolioView() {
           };
           setPortfolios([portfolio]);
           await fetchTokenMetadata(portfolioData.rows.map((r: PortfolioRow) => r.mint));
+          
+          // Track portfolio view
+          await trackPortfolioAction('view');
         } else {
           setError('Portfolio not found');
         }
@@ -338,6 +343,27 @@ export default function PublicPortfolioView() {
 
     loadPortfolio();
   }, [portfolioId, fetchPumpFunImages, fetchBNBTokenImage, scrapeFourMemeImage]);
+
+  const trackPortfolioAction = async (action: 'view' | 'share') => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const referrerId = urlParams.get('ref');
+      
+      await fetch('/api/track-portfolio', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          portfolioId,
+          action,
+          referrerId
+        })
+      });
+    } catch (error) {
+      console.error('Failed to track portfolio action:', error);
+    }
+  };
 
   const fetchTokenMetadata = async (mints: string[]) => {
     try {
@@ -510,16 +536,39 @@ export default function PublicPortfolioView() {
                 <span className="text-sm text-white/60">
                   Shared Portfolio • Read Only
                 </span>
+                <button
+                  onClick={() => trackPortfolioAction('share')}
+                  className="text-white/60 hover:text-white transition-colors"
+                  title="Share this portfolio"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                    <polyline points="16,6 12,2 8,6"/>
+                    <line x1="12" y1="2" x2="12" y2="15"/>
+                  </svg>
+                </button>
               </div>
+              <Link href="/builder" className="text-sm text-white/60 hover:text-white">← Builder</Link>
             </div>
           </div>
           
           {/* Main Header - Similar to "Build your Bags!" */}
-          <h1 className="text-3xl font-semibold mb-2">
-            {portfolios.length > 0 && portfolios[0].username 
-              ? `${portfolios[0].username}'s Portfolio` 
-              : "Shared Portfolio"}
-          </h1>
+          <div className="flex items-center gap-4 mb-2">
+            {portfolios.length > 0 && portfolios[0].profilePicture && (
+              <div className="w-12 h-12 rounded-full overflow-hidden">
+                <img
+                  src={portfolios[0].profilePicture}
+                  alt={portfolios[0].username || 'User'}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            <h1 className="text-3xl font-semibold">
+              {portfolios.length > 0 && portfolios[0].username 
+                ? `${portfolios[0].username}'s Portfolio` 
+                : "Shared Portfolio"}
+            </h1>
+          </div>
           <p className="text-white/60">
             Viewing a shared portfolio. Sign in to create and edit your own portfolios.
           </p>
@@ -558,7 +607,7 @@ export default function PublicPortfolioView() {
                               </span>
                               {' • '}
                               <span className="text-blue-400">
-                                {formatMarketCap(stats.avgMarketCap)} avg mcap
+                                {formatMarketCap(stats.avgMarketCap)} Avg MCap
                               </span>
                             </>
                           )}

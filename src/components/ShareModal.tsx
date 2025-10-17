@@ -19,9 +19,10 @@ interface ShareModalProps {
   };
   tokenMeta?: Record<string, { symbol?: string; name?: string; logoURI?: string | null }>;
   extraMeta?: Record<string, { symbol?: string; name?: string; logoURI?: string | null }>;
+  userId?: string; // Add userId for referral tracking
 }
 
-export default function ShareModal({ isOpen, onClose, portfolio, portfolioStats, tokenMeta = {}, extraMeta = {} }: ShareModalProps) {
+export default function ShareModal({ isOpen, onClose, portfolio, portfolioStats, tokenMeta = {}, extraMeta = {}, userId }: ShareModalProps) {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [shareLink, setShareLink] = useState<string>('');
@@ -29,9 +30,11 @@ export default function ShareModal({ isOpen, onClose, portfolio, portfolioStats,
   const [isVisible, setIsVisible] = useState(false);
 
   const generateShareLink = () => {
-    // Create a public shareable link using the portfolio ID
+    // Create a public shareable link using the portfolio ID with referral tracking
     const baseUrl = window.location.origin;
-    const shareUrl = `${baseUrl}/share/${portfolio.id}`;
+    const shareUrl = userId 
+      ? `${baseUrl}/share/${portfolio.id}?ref=${userId}`
+      : `${baseUrl}/share/${portfolio.id}`;
     setShareLink(shareUrl);
     return shareUrl;
   };

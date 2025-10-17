@@ -48,7 +48,7 @@ export default function ShareImageGenerator({ portfolioData, onImageGenerated }:
       ctx.fillRect(0, 0, 1200, 630);
 
       // Portfolio name - centered and prominent
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#FFFFFF'; // Accent - White
       ctx.font = 'bold 48px Golos Text, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(portfolioData.portfolioName, 600, 200);
@@ -58,32 +58,32 @@ export default function ShareImageGenerator({ portfolioData, onImageGenerated }:
       const statsSpacing = 300;
 
       // Average Market Cap
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#FFFFFF'; // Accent - White
       ctx.font = 'bold 24px Golos Text, sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText('Average Market Cap:', 150, statsY);
       
-      ctx.fillStyle = '#60a5fa';
+      ctx.fillStyle = '#00C2FF'; // Primary - Cyan Blue
       ctx.font = 'bold 32px Golos Text, sans-serif';
       ctx.fillText(formatMarketCap(portfolioData.avgMarketCap), 150, statsY + 40);
 
       // Average Price Change
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#FFFFFF'; // Accent - White
       ctx.font = 'bold 24px Golos Text, sans-serif';
       ctx.fillText('24h Change:', 150 + statsSpacing, statsY);
       
-      const changeColor = portfolioData.avgPriceChange >= 0 ? '#4ade80' : '#f87171';
+      const changeColor = portfolioData.avgPriceChange >= 0 ? '#4ade80' : '#f87171'; // Keep green/red for gains/losses
       ctx.fillStyle = changeColor;
       ctx.font = 'bold 32px Golos Text, sans-serif';
       const changeText = `${portfolioData.avgPriceChange >= 0 ? '+' : ''}${portfolioData.avgPriceChange.toFixed(2)}%`;
       ctx.fillText(changeText, 150 + statsSpacing, statsY + 40);
 
       // Token Count
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#FFFFFF'; // Accent - White
       ctx.font = 'bold 24px Golos Text, sans-serif';
       ctx.fillText('Tokens:', 150 + statsSpacing * 2, statsY);
       
-      ctx.fillStyle = '#fbbf24';
+      ctx.fillStyle = '#7D00FF'; // Secondary - Purple
       ctx.font = 'bold 32px Golos Text, sans-serif';
       ctx.fillText(`${portfolioData.tokenCount}`, 150 + statsSpacing * 2, statsY + 40);
 

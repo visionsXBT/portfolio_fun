@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 interface LogoProps {
   size?: "default" | "large";
@@ -8,7 +9,7 @@ export default function Logo({ size = "default" }: LogoProps) {
   const isLarge = size === "large";
   
   return (
-    <div className="flex items-center gap-3">
+    <Link href="/" className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
       <div className={`${isLarge ? 'w-32 h-16' : 'w-24 h-12'} relative rounded-lg flex items-center justify-center`}>
         <Image
           src="/logo.png"
@@ -18,6 +19,6 @@ export default function Logo({ size = "default" }: LogoProps) {
           className="object-contain"
         />
       </div>
-    </div>
+    </Link>
   );
 }
