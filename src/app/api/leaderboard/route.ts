@@ -26,35 +26,79 @@ export async function GET() {
       }
     }
 
-    // Calculate stats for each portfolio
-    const portfoliosWithStats = allPortfolios.map(portfolio => {
-      const views = portfolio.views || 0;
-      const shares = portfolio.shares || 0;
-      const avgChange = portfolio.avgChange || 0;
-      const tokenCount = portfolio.rows?.length || 0;
+    // Function to fetch fresh token data from DexScreener
+    const fetchTokenData = async (mints: string[]) => {
+      if (mints.length === 0) return {};
       
-      // Use the actual avgMarketCap from the portfolio data
-      // If not available, use a placeholder for now (will be calculated on next save)
-      let avgMarketCap = portfolio.avgMarketCap || 0;
-      
-      // For portfolios without market cap data, use a reasonable default
-      if (avgMarketCap === 0 && tokenCount > 0) {
-        avgMarketCap = 1000000; // 1M default for portfolios without calculated market cap
+      try {
+        const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mints.join(',')}`);
+        if (response.ok) {
+          const data = await response.json();
+          const tokenData: Record<string, { priceChange24h: number; marketCap: number }> = {};
+          
+          if (data.pairs) {
+            for (const pair of data.pairs) {
+              const mint = pair.baseToken?.address;
+              if (mint) {
+                tokenData[mint] = {
+                  priceChange24h: pair.priceChange24h?.h24 || 0,
+                  marketCap: pair.marketCap || 0
+                };
+              }
+            }
+          }
+          
+          return tokenData;
+        }
+      } catch (error) {
+        console.error('Failed to fetch token data:', error);
       }
+      
+      return {};
+    };
 
-      return {
-        id: portfolio.id,
-        name: portfolio.name,
-        username: portfolio.username,
-        views,
-        shares,
-        avgChange,
-        tokenCount,
-        avgMarketCap,
-        profilePicture: portfolio.profilePicture,
-        rows: portfolio.rows
-      };
-    });
+    // Calculate fresh stats for each portfolio
+    const portfoliosWithStats = await Promise.all(
+      allPortfolios.map(async (portfolio) => {
+        const views = portfolio.views || 0;
+        const shares = portfolio.shares || 0;
+        const tokenCount = portfolio.rows?.length || 0;
+        
+        let avgChange = 0;
+        let avgMarketCap = 0;
+        
+        // Calculate fresh data if portfolio has tokens
+        if (tokenCount > 0 && portfolio.rows) {
+          const mints = portfolio.rows.map((row: { mint: string }) => row.mint);
+          const tokenData = await fetchTokenData(mints);
+          
+          // Calculate average change and market cap
+          const changes = mints.map(mint => tokenData[mint]?.priceChange24h || 0);
+          const marketCaps = mints.map(mint => tokenData[mint]?.marketCap || 0);
+          
+          avgChange = changes.length > 0 
+            ? changes.reduce((sum, change) => sum + change, 0) / changes.length 
+            : 0;
+          
+          avgMarketCap = marketCaps.length > 0 
+            ? marketCaps.reduce((sum, marketCap) => sum + marketCap, 0) / marketCaps.length 
+            : 0;
+        }
+
+        return {
+          id: portfolio.id,
+          name: portfolio.name,
+          username: portfolio.username,
+          views,
+          shares,
+          avgChange,
+          tokenCount,
+          avgMarketCap,
+          profilePicture: portfolio.profilePicture,
+          rows: portfolio.rows
+        };
+      })
+    );
 
     // Sort by different criteria
     const mostShared = [...portfoliosWithStats]
@@ -76,7 +120,7 @@ export async function GET() {
       .sort((a, b) => b.tokenCount - a.tokenCount)
       .slice(0, 20);
 
-    console.log('Leaderboard data:', {
+    console.log('Leaderboard data with fresh calculations:', {
       totalPortfolios: portfoliosWithStats.length,
       mostSharedCount: mostShared.length,
       bestPerformingCount: bestPerforming.length,
