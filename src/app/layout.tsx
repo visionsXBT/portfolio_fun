@@ -22,8 +22,8 @@ const golosText = Golos_Text({
 });
 
 export const metadata: Metadata = {
-  title: "onPort",
-  description: "Build portfolios of any kind with onPort. Create and share Solana memecoin portfolios with live prices.",
+  title: "onPort — Build your bags and shill it to the world!",
+  description: "Build bags with onPort, from Solana to BNB. The world is waiting for you to shill your bags",
   icons: {
     icon: [
       { url: "/favicon.png", type: "image/png" },

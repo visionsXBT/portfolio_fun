@@ -286,14 +286,39 @@ export default function BuilderPageContent() {
     }
   }, [searchParams, hasLoadedUserPortfolios]);
 
-  const addPortfolio = useCallback(() => {
+  const addPortfolio = useCallback(async () => {
     // Generate a unique ID based on timestamp to avoid conflicts
     const newId = Date.now().toString();
-    setPortfolios((prev) => [
-      ...prev,
-      { id: newId, name: `Portfolio ${prev.length + 1}`, rows: [], isExpanded: true }
-    ]);
-  }, []);
+    const newPortfolio = { 
+      id: newId, 
+      name: `Portfolio ${portfolios.length + 1}`, 
+      rows: [], 
+      isExpanded: true,
+      views: 0,
+      shares: 0,
+      avgChange: 0,
+      avgMarketCap: 0
+    };
+    
+    // Update local state first
+    setPortfolios((prev) => [...prev, newPortfolio]);
+
+    // Save to database if user is logged in
+    if (userAccount?.id) {
+      try {
+        const updatedPortfolios = [...portfolios, newPortfolio];
+        
+        await fetch(`/api/user/${userAccount.id}/portfolios`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ portfolios: updatedPortfolios })
+        });
+        console.log('✅ New portfolio created in database');
+      } catch (error) {
+        console.error('❌ Failed to create portfolio in database:', error);
+      }
+    }
+  }, [portfolios, userAccount]);
 
   const handleCreateAccount = useCallback(async (username: string, userId: string) => {
     const userData = { username, id: userId, accountType: 'email' as const };
@@ -443,22 +468,63 @@ export default function BuilderPageContent() {
     setSelectedPortfolioForShare(null);
   }, []);
 
-  const handleCreatePortfolio = useCallback(() => {
+  const handleCreatePortfolio = useCallback(async () => {
     if (!userAccount) {
       setShowSignInModal(true);
     } else {
       // Generate a unique ID based on timestamp to avoid conflicts
       const newId = Date.now().toString();
-      setPortfolios((prev) => [
-        ...prev,
-        { id: newId, name: `Portfolio ${prev.length + 1}`, rows: [], isExpanded: true }
-      ]);
-    }
-  }, [userAccount]);
+      const newPortfolio = { 
+        id: newId, 
+        name: `Portfolio ${portfolios.length + 1}`, 
+        rows: [], 
+        isExpanded: true,
+        views: 0,
+        shares: 0,
+        avgChange: 0,
+        avgMarketCap: 0
+      };
+      
+      // Update local state first
+      setPortfolios((prev) => [...prev, newPortfolio]);
 
-  const removePortfolio = useCallback((portfolioId: string) => {
+      // Save to database
+      try {
+        const updatedPortfolios = [...portfolios, newPortfolio];
+        
+        await fetch(`/api/user/${userAccount.id}/portfolios`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ portfolios: updatedPortfolios })
+        });
+        console.log('✅ First portfolio created in database');
+      } catch (error) {
+        console.error('❌ Failed to create first portfolio in database:', error);
+      }
+    }
+  }, [userAccount, portfolios]);
+
+  const removePortfolio = useCallback(async (portfolioId: string) => {
+    // Update local state first
     setPortfolios((prev) => prev.filter((p) => p.id !== portfolioId));
-  }, []);
+
+    // Delete from database if user is logged in
+    if (userAccount?.id) {
+      try {
+        // Get the updated portfolios after removal
+        const updatedPortfolios = portfolios.filter((p) => p.id !== portfolioId);
+
+        await fetch(`/api/user/${userAccount.id}/portfolios`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ portfolios: updatedPortfolios })
+        });
+        console.log('✅ Portfolio deleted from database');
+      } catch (error) {
+        console.error('❌ Failed to delete portfolio from database:', error);
+      }
+    }
+  }, [portfolios, userAccount]);
 
   const togglePortfolio = useCallback((portfolioId: string) => {
     setPortfolios((prev) => prev.map((p) => 
@@ -1151,13 +1217,66 @@ export default function BuilderPageContent() {
     }
   }, [portfolioInputs, fetchPumpFunImages, fetchBNBTokenImage, portfolios, userAccount, extraMeta, tokenMeta, priceChanges24h, marketCaps]);
 
-  const removeRow = useCallback((portfolioId: string, mint: string) => {
+  const removeRow = useCallback(async (portfolioId: string, mint: string) => {
+    // Update local state first
     setPortfolios((prev) => prev.map((p) => 
       p.id === portfolioId 
         ? { ...p, rows: p.rows.filter((r) => r.mint !== mint) }
         : p
     ));
-  }, []);
+
+    // Save to database if user is logged in
+    if (userAccount?.id) {
+      try {
+        // Get the updated portfolios after removal
+        const updatedPortfolios = portfolios.map((p) => 
+          p.id === portfolioId 
+            ? { ...p, rows: p.rows.filter((r) => r.mint !== mint) }
+            : p
+        );
+
+        // Calculate stats for the updated portfolio
+        const updatedPortfolio = updatedPortfolios.find(p => p.id === portfolioId);
+        if (updatedPortfolio) {
+          const portfolioMints = updatedPortfolio.rows.map(r => r.mint);
+          
+          // Calculate average change
+          const portfolioChanges = portfolioMints.map(mint => {
+            const meta = extraMeta[mint] || tokenMeta[mint];
+            return meta?.priceChange24h || priceChanges24h[mint] || 0;
+          });
+          const avgChange = portfolioChanges.length > 0 
+            ? portfolioChanges.reduce((sum, change) => sum + change, 0) / portfolioChanges.length 
+            : 0;
+          
+          // Calculate average market cap
+          const portfolioMarketCaps = portfolioMints.map(mint => {
+            const meta = extraMeta[mint] || tokenMeta[mint];
+            return meta?.marketCap || marketCaps[mint] || 0;
+          });
+          const avgMarketCap = portfolioMarketCaps.length > 0 
+            ? portfolioMarketCaps.reduce((sum, marketCap) => sum + marketCap, 0) / portfolioMarketCaps.length 
+            : 0;
+
+          // Update the portfolio with new stats
+          const portfolioWithStats = updatedPortfolios.map(p => 
+            p.id === portfolioId 
+              ? { ...p, avgChange, avgMarketCap }
+              : p
+          );
+
+          await fetch(`/api/user/${userAccount.id}/portfolios`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ portfolios: portfolioWithStats })
+          });
+          console.log('✅ Portfolio updated in database after token removal');
+        }
+      } catch (error) {
+        console.error('❌ Failed to save portfolio after removing token:', error);
+      }
+    }
+  }, [portfolios, userAccount, extraMeta, tokenMeta, priceChanges24h, marketCaps]);
 
   const copyShare = useCallback(() => {
     const encoded = encodePortfolios(portfolios);

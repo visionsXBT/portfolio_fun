@@ -218,7 +218,32 @@ export default function ShareModal({ isOpen, onClose, portfolio, portfolioStats,
             portfolioName: portfolio.name,
             avgMarketCap: portfolioStats.avgMarketCap,
             avgPriceChange: portfolioStats.change24h,
-            tokenCount: portfolio.rows.length
+            tokenCount: portfolio.rows.length,
+            tokenImages: portfolio.rows.map(row => {
+              const meta = extraMeta[row.mint] || tokenMeta[row.mint];
+              return {
+                src: meta?.logoURI || null,
+                symbol: meta?.symbol || 'Token',
+                mint: row.mint
+              };
+            }),
+            chain: (() => {
+              const hasSolana = portfolio.rows.some(row => {
+                try {
+                  return row.mint.length >= 32 && row.mint.length <= 44 && /^[1-9A-HJ-NP-Za-km-z]+$/.test(row.mint);
+                } catch {
+                  return false;
+                }
+              });
+              const hasBNB = portfolio.rows.some(row => {
+                return row.mint.startsWith('0x') && row.mint.length === 42;
+              });
+              
+              if (hasSolana && hasBNB) return 'Mixed';
+              if (hasSolana) return 'Solana';
+              if (hasBNB) return 'BNB';
+              return 'Solana'; // Default to Solana
+            })()
           }}
           onImageGenerated={handleImageGenerated}
         />
