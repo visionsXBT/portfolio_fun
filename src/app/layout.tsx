@@ -46,6 +46,30 @@ export default function RootLayout({
         <link rel="icon" type="image/png" href="/favicon.png" />
         <link rel="shortcut icon" type="image/png" href="/favicon.png" />
         <link rel="apple-touch-icon" href="/favicon.png" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Disable right-click context menu
+              document.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                return false;
+              });
+              
+              // Disable F12, Ctrl+Shift+I, Ctrl+U, Ctrl+S, Ctrl+A, Ctrl+P
+              document.addEventListener('keydown', function(e) {
+                if (e.key === 'F12' || 
+                    (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+                    (e.ctrlKey && e.key === 'u') ||
+                    (e.ctrlKey && e.key === 's') ||
+                    (e.ctrlKey && e.key === 'a') ||
+                    (e.ctrlKey && e.key === 'p')) {
+                  e.preventDefault();
+                  return false;
+                }
+              });
+            `,
+          }}
+        />
       </head>
       <ClientBody className={`${golosText.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}>
         <PageTransition>

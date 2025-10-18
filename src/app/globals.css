@@ -57,7 +57,13 @@ input, textarea, [contenteditable] {
   -ms-user-select: text;
 }
 
-/* Context menu (right-click) is now enabled for debugging */
+/* Disable right-click context menu */
+* {
+  -webkit-context-menu: none;
+  -moz-context-menu: none;
+  -ms-context-menu: none;
+  context-menu: none;
+}
 
 /* Disable drag and drop */
 * {
@@ -208,4 +214,36 @@ input, textarea, [contenteditable] {
     opacity: 0.3;
     box-shadow: 0 0 12px rgba(34, 197, 94, 0.8);
   }
+}
+
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(45deg, var(--brand-start), var(--brand-end));
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(45deg, var(--brand-end), var(--brand-start));
+  box-shadow: 0 0 8px rgba(0, 194, 255, 0.3);
+}
+
+::-webkit-scrollbar-corner {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Firefox scrollbar styles */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--brand-start) rgba(255, 255, 255, 0.05);
 }
