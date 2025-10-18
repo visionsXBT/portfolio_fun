@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 
 export async function GET() {
@@ -31,27 +31,41 @@ export async function GET() {
       if (mints.length === 0) return {};
       
       try {
+        console.log('🔍 Fetching token data for mints:', mints);
+        
         const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mints.join(',')}`);
+        
         if (response.ok) {
           const data = await response.json();
+          console.log('📊 DexScreener response:', data);
+          
           const tokenData: Record<string, { priceChange24h: number; marketCap: number }> = {};
           
           if (data.pairs) {
             for (const pair of data.pairs) {
               const mint = pair.baseToken?.address;
               if (mint) {
+                // Use the same structure as builder page
+                const priceChange24h = typeof pair.priceChange?.h24 === "number" ? pair.priceChange.h24 : 0;
+                const marketCap = typeof pair.marketCap === "number" ? pair.marketCap : 0;
+                
                 tokenData[mint] = {
-                  priceChange24h: pair.priceChange24h?.h24 || 0,
-                  marketCap: pair.marketCap || 0
+                  priceChange24h,
+                  marketCap
                 };
+                
+                console.log(`📈 Token ${mint}: ${priceChange24h}% change, $${marketCap} market cap`);
               }
             }
           }
           
+          console.log('📊 Final token data:', tokenData);
           return tokenData;
+        } else {
+          console.error('❌ DexScreener API error:', response.status, response.statusText);
         }
       } catch (error) {
-        console.error('Failed to fetch token data:', error);
+        console.error('❌ Failed to fetch token data:', error);
       }
       
       return {};
@@ -70,19 +84,23 @@ export async function GET() {
         // Calculate fresh data if portfolio has tokens
         if (tokenCount > 0 && portfolio.rows) {
           const mints = portfolio.rows.map((row: { mint: string }) => row.mint);
+          console.log(`📊 Calculating stats for portfolio ${portfolio.name} with mints:`, mints);
+          
           const tokenData = await fetchTokenData(mints);
           
           // Calculate average change and market cap
-          const changes = mints.map(mint => tokenData[mint]?.priceChange24h || 0);
-          const marketCaps = mints.map(mint => tokenData[mint]?.marketCap || 0);
+          const changes = mints.map((mint: string) => tokenData[mint]?.priceChange24h || 0);
+          const marketCaps = mints.map((mint: string) => tokenData[mint]?.marketCap || 0);
           
           avgChange = changes.length > 0 
-            ? changes.reduce((sum, change) => sum + change, 0) / changes.length 
+            ? changes.reduce((sum: number, change: number) => sum + change, 0) / changes.length 
             : 0;
           
           avgMarketCap = marketCaps.length > 0 
-            ? marketCaps.reduce((sum, marketCap) => sum + marketCap, 0) / marketCaps.length 
+            ? marketCaps.reduce((sum: number, marketCap: number) => sum + marketCap, 0) / marketCaps.length 
             : 0;
+          
+          console.log(`📊 Portfolio ${portfolio.name} calculated: ${avgChange.toFixed(2)}% change, $${avgMarketCap.toFixed(0)} avg market cap`);
         }
 
         return {
