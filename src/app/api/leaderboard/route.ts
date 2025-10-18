@@ -54,7 +54,7 @@ export async function GET() {
                   marketCap
                 };
                 
-                console.log(`📈 Token ${mint}: ${priceChange24h}% change, $${marketCap} market cap`);
+                console.log(`[CHART] Token ${mint}: ${priceChange24h}% change, $${marketCap} market cap`);
               }
             }
           }
@@ -121,7 +121,7 @@ export async function GET() {
     // Sort by different criteria
     const mostShared = [...portfoliosWithStats]
       .sort((a, b) => b.views - a.views)
-      .slice(0, 20);
+      .slice(0, 5);
 
     const bestPerforming = [...portfoliosWithStats]
       .filter(p => p.tokenCount > 0) // Only portfolios with tokens
@@ -132,11 +132,11 @@ export async function GET() {
         const scoreB = (b.avgChange * 0.7) + (Math.log10(Math.max(b.avgMarketCap, 1000)) * 0.3);
         return scoreB - scoreA;
       })
-      .slice(0, 20);
+      .slice(0, 5);
 
     const mostDiverse = [...portfoliosWithStats]
       .sort((a, b) => b.tokenCount - a.tokenCount)
-      .slice(0, 20);
+      .slice(0, 5);
 
     console.log('Leaderboard data with fresh calculations:', {
       totalPortfolios: portfoliosWithStats.length,

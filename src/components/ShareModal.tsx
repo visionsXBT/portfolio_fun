@@ -51,18 +51,6 @@ export default function ShareModal({ isOpen, onClose, portfolio, portfolioStats,
     }, 300);
   };
 
-  const downloadImage = () => {
-    if (!generatedImage) return;
-    
-    const link = document.createElement('a');
-    link.download = `${portfolio.name}-portfolio.png`;
-    link.href = generatedImage;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-
   const handleOpen = () => {
     generateShareLink();
   };
@@ -110,12 +98,12 @@ export default function ShareModal({ isOpen, onClose, portfolio, portfolioStats,
         onClick={(e) => e.stopPropagation()}
       >
         {/* Share Card */}
-        <div className="relative" style={{ fontFamily: 'Golos Text, sans-serif' }}>
-          {/* Base sharing.png image - 800x450 */}
+        <div className="relative w-full max-w-[800px]" style={{ fontFamily: 'Golos Text, sans-serif' }}>
+          {/* Base sharing.png image - responsive */}
           <img 
             src="/sharing.png" 
             alt="Share Card" 
-            className="w-[800px] h-[450px] shadow-2xl object-cover select-none" 
+            className="w-full h-auto max-w-[800px] max-h-[450px] shadow-2xl object-cover select-none" 
             draggable={false}
             onContextMenu={(e) => {
               e.preventDefault();
@@ -124,15 +112,15 @@ export default function ShareModal({ isOpen, onClose, portfolio, portfolioStats,
           />
           
           {/* Overlay Content */}
-          <div className="absolute inset-0 p-8 flex flex-col justify-end">
+          <div className="absolute inset-0 p-4 sm:p-8 flex flex-col justify-end">
             {/* Main Content - Moved to Bottom */}
             <div className="flex flex-col">
               {/* Token Pictures - Top */}
-              <div className="flex gap-4 mb-4">
+              <div className="flex gap-2 sm:gap-4 mb-4">
                 {portfolio.rows.slice(0, 4).map((row) => {
                   const meta = tokenMeta[row.mint] || extraMeta[row.mint];
                   return (
-                    <div key={row.mint} className="w-32 h-32 overflow-hidden">
+                    <div key={row.mint} className="w-16 h-16 sm:w-32 sm:h-32 overflow-hidden">
                       <img 
                         src={meta?.logoURI || '/placeholder-token.svg'} 
                         alt={meta?.symbol || 'Token'} 
@@ -142,7 +130,7 @@ export default function ShareModal({ isOpen, onClose, portfolio, portfolioStats,
                   );
                 })}
                 {portfolio.rows.length > 4 && (
-                  <div className="w-32 h-32 bg-white/20 flex items-center justify-center text-white text-sm font-bold">
+                  <div className="w-16 h-16 sm:w-32 sm:h-32 bg-white/20 flex items-center justify-center text-white text-xs sm:text-sm font-bold">
                     +{portfolio.rows.length - 4}
                   </div>
                 )}
@@ -150,18 +138,18 @@ export default function ShareModal({ isOpen, onClose, portfolio, portfolioStats,
 
               {/* Text Content - Left Aligned */}
               <div className="text-left">
-                {/* Portfolio Name - Largest Font */}
-                <div className="text-white text-2xl font-bold mb-4">
+                {/* Portfolio Name - Responsive Font */}
+                <div className="text-white text-lg sm:text-2xl font-bold mb-2 sm:mb-4">
                   {portfolio.name}
                 </div>
                 
                 {/* Statistics */}
-                <div className="text-white/90 text-base mb-2">
+                <div className="text-white/90 text-sm sm:text-base mb-1 sm:mb-2">
                   24H change: <span className={`font-semibold ${portfolioStats.change24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     {portfolioStats.change24h >= 0 ? '+' : ''}{portfolioStats.change24h.toFixed(2)}%
                   </span>
                 </div>
-                <div className="text-white/90 text-base mb-3">
+                <div className="text-white/90 text-sm sm:text-base mb-2 sm:mb-3">
                   Avg. Mcap: <span className="font-semibold">
                     ${portfolioStats.avgMarketCap >= 1e9 
                       ? `${(portfolioStats.avgMarketCap / 1e9).toFixed(1)}B`
@@ -173,14 +161,14 @@ export default function ShareModal({ isOpen, onClose, portfolio, portfolioStats,
                 </div>
 
                 {/* Chain Logos */}
-                <div className="flex items-center gap-3">
-                  <span className="text-white/90 text-base">Chain</span>
-                  <div className="flex gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <span className="text-white/90 text-sm sm:text-base">Chain</span>
+                  <div className="flex gap-2 sm:gap-3">
                     {chains.includes('solana') && (
-                      <img src="/sol-logo.png" alt="Solana" className="w-6 h-6" />
+                      <img src="/sol-logo.png" alt="Solana" className="w-5 h-5 sm:w-6 sm:h-6" />
                     )}
                     {chains.includes('bnb') && (
-                      <img src="/bnb logo.png" alt="BNB" className="w-6 h-6" />
+                      <img src="/bnb logo.png" alt="BNB" className="w-5 h-5 sm:w-6 sm:h-6" />
                     )}
                   </div>
                 </div>
@@ -190,15 +178,12 @@ export default function ShareModal({ isOpen, onClose, portfolio, portfolioStats,
         </div>
 
         {/* External Action Buttons - Below Share Card, Right Justified */}
-        <div className="flex gap-3 justify-end w-full max-w-[800px]">
-          <button
-            onClick={downloadImage}
-            disabled={!generatedImage}
-            className="flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 text-white px-4 py-2 text-xs hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <img src="/downloading.png" alt="Download" className="w-4 h-4" />
-            <span>Download</span>
-          </button>
+        <div className="flex flex-col sm:flex-row gap-3 justify-end w-full max-w-[800px]">
+          <div className="text-center sm:text-right">
+            <p className="text-white/80 text-sm sm:text-base mb-2">
+              Flex your bags! Screenshot this and share it to the world.
+            </p>
+          </div>
           <button
             onClick={() => {
               navigator.clipboard.writeText(shareLink);

@@ -59,11 +59,35 @@ export default function PublicPortfolioView() {
   const fetchPumpFunImages = useCallback(async (mint: string): Promise<string | null> => {
     console.log('🔍 Trying image sources for Solana token:', mint);
     
-    // For pump tokens, just return the URL directly without validation
+    // For pump tokens, try pump.fun first, then DexScreener for tokens without specific images
     if (mint.toLowerCase().includes('pump')) {
       const pumpUrl = `https://images.pump.fun/coin-image/${mint}?variant=600x600`;
-      console.log('✅ Returning pump.fun URL directly:', pumpUrl);
-      return pumpUrl;
+      console.log('🔍 Testing pump.fun URL for pump token:', pumpUrl);
+      
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        
+        const response = await fetch(pumpUrl, { 
+          method: 'HEAD',
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          console.log('✅ Found specific image from pump.fun URL:', pumpUrl);
+          return pumpUrl;
+        } else {
+          console.log('❌ No specific pump.fun image found, trying DexScreener');
+        }
+      } catch (error) {
+        console.log('❌ Pump.fun URL failed, trying DexScreener:', (error as Error).message);
+      }
+      
+      // Fall back to DexScreener for pump tokens without specific images
+      console.log('🔍 Trying DexScreener for pump token without specific image');
+      // Continue to DexScreener logic below
     }
     
     // For non-pump tokens, try DexScreener first (primary source)
@@ -116,7 +140,7 @@ export default function PublicPortfolioView() {
     
     // For non-pump tokens, try a few pump.fun URLs as fallback
     const urls = [
-      `https://images.pump.fun/coin-image/${mint}?variant=600x600`,
+      `https://images.pump.fun/coin-image/${mint}?variant=600x600&ipfs=QmQw4DQjdWp3G8TuMCykG8SVSwtFwkxvTyxEWNMuAVYU4q&src=https%3A%2F%2Fipfs.io%2Fipfs%2FQmQw4DQjdWp3G8TuMCykG8SVSwtFwkxvTyxEWNMuAVYU4q`,
       `https://images.pump.fun/coin-image/${mint}`,
       `https://pump.fun/${mint}.png`,
     ];
@@ -548,7 +572,7 @@ export default function PublicPortfolioView() {
                   </svg>
                 </button>
               </div>
-              <Link href="/builder" className="text-sm text-white/60 hover:text-white">← Builder</Link>
+              <Link href="/user" className="text-sm text-white/60 hover:text-white">← Builder</Link>
             </div>
           </div>
           
@@ -578,12 +602,12 @@ export default function PublicPortfolioView() {
         {portfolios.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-white/60 text-lg mb-4">No portfolios to display</div>
-            <a 
-              href="/builder" 
+            <Link 
+              href="/user" 
               className="inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/5 text-white px-4 py-2 text-sm hover:bg-white/10 transition-colors"
             >
               Open portfolio builder
-            </a>
+            </Link>
           </div>
         ) : (
           portfolios.map((portfolio, portfolioIndex) => {
@@ -679,12 +703,12 @@ export default function PublicPortfolioView() {
 
         {/* Footer */}
         <div className="text-center mt-8">
-          <a 
-            href="/builder" 
+          <Link 
+            href="/user" 
             className="inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/5 text-white px-4 py-2 text-sm hover:bg-white/10 transition-colors"
           >
             Open portfolio builder
-          </a>
+          </Link>
           <div className="text-white/60 text-sm mt-4">
             Portfolio shared via <span className="text-white font-semibold">onPort</span>
           </div>

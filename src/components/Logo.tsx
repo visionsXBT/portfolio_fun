@@ -5,17 +5,15 @@ interface LogoProps {
   size?: "default" | "large";
 }
 
-export default function Logo({ size = "default" }: LogoProps) {
-  const isLarge = size === "large";
-  
+export default function Logo({ size }: LogoProps) {
   return (
     <Link href="/" className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
-      <div className={`${isLarge ? 'w-32 h-16' : 'w-24 h-12'} relative rounded-lg flex items-center justify-center`}>
+      <div className="w-32 h-16 relative rounded-lg flex items-center justify-center">
         <Image
           src="/logo.png"
           alt="onPort Logo"
-          width={isLarge ? 400 : 300}
-          height={isLarge ? 156 : 117}
+          width={400}
+          height={156}
           className="object-contain"
         />
       </div>

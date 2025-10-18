@@ -1,15 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { PublicKey } from "@solana/web3.js";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTrophy } from '@fortawesome/free-solid-svg-icons';
 import Logo from "@/components/Logo";
 import AccountModal from "@/components/AccountModal";
 import SignInModal from "@/components/SignInModal";
 import TokenImage from "@/components/TokenImage";
+import JumpingDots from "@/components/JumpingDots";
 import ShareModal from "@/components/ShareModal";
 import ProfilePictureUpload from "@/components/ProfilePictureUpload";
+import UserSearchBar from "@/components/UserSearchBar";
 
 type PortfolioRow = {
   mint: string;
@@ -126,9 +130,14 @@ function decodePortfolios(encoded: string | null): Portfolio[] | null {
   }
 }
 
-export default function BuilderPageContent() {
+interface BuilderPageContentProps {
+  username?: string;
+}
+
+export default function BuilderPageContent({ username }: BuilderPageContentProps = {}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [portfolioInputs, setPortfolioInputs] = useState<Record<string, string>>({});
@@ -151,31 +160,29 @@ export default function BuilderPageContent() {
   } | null>(null);
   const [isSharedPortfolio, setIsSharedPortfolio] = useState(false);
   const [hasLoadedUserPortfolios, setHasLoadedUserPortfolios] = useState(false);
+  const [isLoadingUserData, setIsLoadingUserData] = useState(false);
+  const [isOwnProfile, setIsOwnProfile] = useState(false);
 
   // Load user account and portfolios from database (database-first approach)
   useEffect(() => {
     const loadUserData = async () => {
-      const savedUserAccount = localStorage.getItem('userAccount');
-      if (savedUserAccount) {
-        try {
-          const userData = JSON.parse(savedUserAccount);
-          console.log('👤 Found user ID in localStorage, fetching from database:', userData.id);
-          
-          // Fetch fresh user data from database
-          const userResponse = await fetch(`/api/user/${userData.id}`);
-          if (userResponse.ok) {
-            const updatedUserData = await userResponse.json();
-            console.log('👤 Loaded updated user data from database:', updatedUserData);
+      setIsLoadingUserData(true);
+      try {
+        // Check for current user session from database
+        const sessionResponse = await fetch('/api/session');
+        if (sessionResponse.ok) {
+          const sessionData = await sessionResponse.json();
+          if (sessionData.success) {
+            console.log('👤 Found user session, loading user data:', sessionData.user);
             
-            // Use updated user data (includes latest profile picture)
-            setUserAccount(updatedUserData);
-            localStorage.setItem('userAccount', JSON.stringify(updatedUserData));
+            // Use user data from session
+            setUserAccount(sessionData.user);
             
             // Load portfolios from database
             const loadPortfolios = async () => {
               try {
-                console.log('📂 Loading portfolios for user:', updatedUserData.id);
-                const response = await fetch(`/api/user/${updatedUserData.id}/portfolios`);
+                console.log('📂 Loading portfolios for user:', sessionData.user.id);
+                const response = await fetch(`/api/user/${sessionData.user.id}/portfolios`);
                 console.log('📂 Portfolio fetch response status:', response.status);
             
                 if (response.ok) {
@@ -255,22 +262,80 @@ export default function BuilderPageContent() {
         
             loadPortfolios();
           } else {
-            console.log('👤 User not found in database, clearing localStorage');
-            localStorage.removeItem('userAccount');
+            console.log('👤 No valid session found');
             setUserAccount(null);
           }
-        } catch (error) {
-          console.error('Failed to load user account:', error);
+        } else {
+          console.log('👤 No session found');
           setUserAccount(null);
         }
-      } else {
-        console.log('👤 No user account found in localStorage');
+      } catch (error) {
+        console.error('Failed to load user session:', error);
         setUserAccount(null);
+      } finally {
+        setIsLoadingUserData(false);
       }
     };
     
     loadUserData();
   }, []);
+
+  // Refresh session state when page becomes visible (handles navigation from other pages)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Page became visible, refresh session state
+        const refreshSession = async () => {
+          try {
+            const sessionResponse = await fetch('/api/session');
+            if (sessionResponse.ok) {
+              const sessionData = await sessionResponse.json();
+              if (sessionData.success) {
+                setUserAccount(sessionData.user);
+              } else {
+                setUserAccount(null);
+              }
+            } else {
+              setUserAccount(null);
+            }
+          } catch (error) {
+            console.error('Failed to refresh session:', error);
+            setUserAccount(null);
+          }
+        };
+        refreshSession();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  // Determine if this is the user's own profile
+  useEffect(() => {
+    if (username && userAccount) {
+      setIsOwnProfile(userAccount.username === username);
+    } else if (username && !userAccount) {
+      setIsOwnProfile(false);
+    } else {
+      setIsOwnProfile(true); // If no username provided, it's the user's own profile
+    }
+  }, [username, userAccount]);
+
+  // Handle portfolio parameter from URL
+  useEffect(() => {
+    const portfolioId = searchParams.get('portfolio');
+    if (portfolioId && portfolios.length > 0) {
+      // Find the portfolio and set it as editing
+      const portfolio = portfolios.find(p => p.id === portfolioId);
+      if (portfolio) {
+        setEditingPortfolioId(portfolioId);
+        console.log('📝 Loading portfolio for editing:', portfolio.name);
+      }
+    }
+  }, [searchParams, portfolios]);
 
   // Hydrate from query param if present (only if no user portfolios loaded)
   useEffect(() => {
@@ -321,9 +386,9 @@ export default function BuilderPageContent() {
   }, [portfolios, userAccount]);
 
   const handleCreateAccount = useCallback(async (username: string, userId: string) => {
+    setIsLoadingUserData(true);
     const userData = { username, id: userId, accountType: 'email' as const };
     setUserAccount(userData);
-    localStorage.setItem('userAccount', JSON.stringify(userData));
     setShowAccountModal(false);
     
     // Create first portfolio after account creation with unique ID
@@ -343,31 +408,33 @@ export default function BuilderPageContent() {
     } catch (error) {
       console.warn('Failed to save initial portfolio:', error);
     }
-  }, []);
+    setIsLoadingUserData(false);
+    
+    // Redirect to user's profile page
+    router.push(`/${username}`);
+  }, [router]);
 
   const handleSignIn = useCallback(async (username: string, userId: string) => {
-    // First fetch user data from database to get profile picture
+    setIsLoadingUserData(true);
+    // Session is now handled by HTTP-only cookies, just reload user data
     try {
-      const userResponse = await fetch(`/api/user/${userId}`);
-      if (userResponse.ok) {
-        const userData = await userResponse.json();
-        console.log('👤 Loaded user data from database:', userData);
-        
-        // Use the user data from database (includes profile picture)
-        setUserAccount(userData);
-        localStorage.setItem('userAccount', JSON.stringify(userData));
+      const sessionResponse = await fetch('/api/session');
+      if (sessionResponse.ok) {
+        const sessionData = await sessionResponse.json();
+        if (sessionData.success) {
+          console.log('👤 Session validated, loading user data:', sessionData.user);
+          setUserAccount(sessionData.user);
+        } else {
+          console.log('👤 Session validation failed');
+          setUserAccount(null);
+        }
       } else {
-        // Fallback to basic user data if fetch fails
-        const userData = { username, id: userId, accountType: 'email' as const };
-        setUserAccount(userData);
-        localStorage.setItem('userAccount', JSON.stringify(userData));
+        console.log('👤 No session found');
+        setUserAccount(null);
       }
     } catch (error) {
-      console.warn('Failed to fetch user data, using basic data:', error);
-      // Fallback to basic user data if fetch fails
-      const userData = { username, id: userId, accountType: 'email' as const };
-      setUserAccount(userData);
-      localStorage.setItem('userAccount', JSON.stringify(userData));
+      console.warn('Failed to validate session:', error);
+      setUserAccount(null);
     }
     
     setShowSignInModal(false);
@@ -435,28 +502,48 @@ export default function BuilderPageContent() {
       }
     } finally {
       setHasLoadedUserPortfolios(true);
+      setIsLoadingUserData(false);
+      
+      // Redirect to user's profile page
+      router.push(`/${username}`);
     }
-  }, []);
+  }, [router]);
 
   const handleProfilePictureChange = useCallback((imageUrl: string | null) => {
     if (userAccount) {
       const updatedUser = { ...userAccount, profilePicture: imageUrl || undefined };
       setUserAccount(updatedUser);
-      localStorage.setItem('userAccount', JSON.stringify(updatedUser));
     }
   }, [userAccount]);
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
     console.log('🚪 Logging out user...');
-    // Clear portfolios when user logs out
+    try {
+      // Delete session from database
+      const response = await fetch('/api/session', {
+        method: 'DELETE'
+      });
+      
+      if (response.ok) {
+        console.log('✅ Session deleted from database');
+      } else {
+        console.warn('⚠️ Failed to delete session from database');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting session:', error);
+    }
+    
+    // Clear local state
     setPortfolios([]);
     setPortfolioInputs({});
     setUserAccount(null);
-    localStorage.removeItem('userAccount');
     setHasLoadedUserPortfolios(false);
     setIsSharedPortfolio(false);
+    
+    // Redirect to landing page
+    router.push('/');
     console.log('✅ User logged out successfully');
-  }, []);
+  }, [router]);
 
   const handleSharePortfolio = useCallback((portfolio: Portfolio) => {
     setSelectedPortfolioForShare(portfolio);
@@ -561,11 +648,35 @@ export default function BuilderPageContent() {
   const fetchPumpFunImages = useCallback(async (mint: string): Promise<string | null> => {
     console.log('🔍 Trying image sources for Solana token:', mint);
     
-    // For pump tokens, just return the URL directly without validation
+    // For pump tokens, try pump.fun first, then DexScreener for tokens without specific images
     if (mint.toLowerCase().includes('pump')) {
       const pumpUrl = `https://images.pump.fun/coin-image/${mint}?variant=600x600`;
-      console.log('✅ Returning pump.fun URL directly:', pumpUrl);
-      return pumpUrl;
+      console.log('🔍 Testing pump.fun URL for pump token:', pumpUrl);
+      
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        
+        const response = await fetch(pumpUrl, { 
+          method: 'HEAD',
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          console.log('✅ Found specific image from pump.fun URL:', pumpUrl);
+          return pumpUrl;
+        } else {
+          console.log('❌ No specific pump.fun image found, trying DexScreener');
+        }
+      } catch (error) {
+        console.log('❌ Pump.fun URL failed, trying DexScreener:', (error as Error).message);
+      }
+      
+      // Fall back to DexScreener for pump tokens without specific images
+      console.log('🔍 Trying DexScreener for pump token without specific image');
+      // Continue to DexScreener logic below
     }
     
     // For non-pump tokens, try DexScreener first (primary source)
@@ -622,9 +733,35 @@ export default function BuilderPageContent() {
       console.log('❌ DexScreener image failed:', (error as Error).message);
     }
     
-    // For non-pump tokens, try a few pump.fun URLs as fallback
+    // Try Pinata IPFS backup for all Solana tokens
+    const pinataIpfsUrl = `https://pump.mypinata.cloud/ipfs/QmQw4DQjdWp3G8TuMCykG8SVSwtFwkxvTyxEWNMuAVYU4q?img-width=600&img-height=600&img-fit=cover&img-dpr=1&img-onerror=redirect`;
+    console.log('🔍 Testing Pinata IPFS backup URL for Solana token:', pinataIpfsUrl);
+    
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      
+        const response = await fetch(pinataIpfsUrl, { 
+          method: 'HEAD',
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          console.log('✅ Found image from Pinata IPFS backup:', pinataIpfsUrl);
+          return pinataIpfsUrl;
+        } else {
+          console.log('❌ Pinata IPFS backup URL not found');
+        }
+      } catch (error) {
+        console.log('❌ Pinata IPFS backup URL failed:', (error as Error).message);
+      }
+    
+    // For non-pump tokens, try pump.fun URLs with IPFS pattern as fallback
     const urls = [
       `https://images.pump.fun/coin-image/${mint}?variant=600x600`,
+      `https://images.pump.fun/coin-image/${mint}?variant=600x600&ipfs=QmQw4DQjdWp3G8TuMCykG8SVSwtFwkxvTyxEWNMuAVYU4q&src=https%3A%2F%2Fipfs.io%2Fipfs%2FQmQw4DQjdWp3G8TuMCykG8SVSwtFwkxvTyxEWNMuAVYU4q`,
       `https://images.pump.fun/coin-image/${mint}`,
       `https://pump.fun/${mint}.png`,
     ];
@@ -692,6 +829,11 @@ export default function BuilderPageContent() {
   // Function to fetch BNB token images
   // Function to fetch Four.meme market data
   const fetchFourMemeData = useCallback(async (address: string): Promise<{ marketCap?: number; priceChange24h?: number; price?: number } | null> => {
+    // Skip during build time to prevent build errors
+    if (typeof window === 'undefined') {
+      return null;
+    }
+    
     console.log('🔍 Fetching Four.meme data for address:', address);
     
     try {
@@ -1525,9 +1667,15 @@ export default function BuilderPageContent() {
       <div className="mx-auto w-full max-w-6xl">
         {/* Header with Logo */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
             <Logo />
-            <div className="flex items-center gap-4">
+            
+            {/* Search Bar */}
+            <div className="w-full sm:flex-1 sm:max-w-md sm:mx-6 order-2 sm:order-1">
+              <UserSearchBar />
+            </div>
+            
+            <div className="flex items-center gap-4 order-1 sm:order-2">
               {userAccount && (
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-white/60">
@@ -1545,23 +1693,35 @@ export default function BuilderPageContent() {
                   </button>
                 </div>
               )}
-              <Link href="/leaderboard" className="gradient-button px-4 py-2 text-sm text-white rounded-md">🏆 Leaderboard</Link>
+              <Link href="/leaderboard" className="gradient-button px-4 py-2 text-sm text-white rounded-md"><FontAwesomeIcon icon={faTrophy} /> Leaderboard</Link>
             </div>
           </div>
           <h1 className="text-3xl font-semibold mb-2">
-            {isSharedPortfolio ? "Shared Portfolio" : "Build your Bags!"}
+            {isSharedPortfolio ? "Shared Portfolio" : 
+             username && !isOwnProfile ? `${username}'s Portfolio` :
+             "Build your Bags!"}
           </h1>
           <p className="text-white/60">
             {isSharedPortfolio 
               ? "Viewing a shared portfolio. Sign in to create and edit your own portfolios."
+              : username && !isOwnProfile
+              ? `Viewing ${username}'s portfolio. Sign in to create and edit your own portfolios.`
               : "Create multiple portfolios. Click on a portfolio to expand and add tokens."
             }
           </p>
         </div>
 
         {/* User Profile Section */}
-        {userAccount && !isSharedPortfolio && (
-          <div className="mb-8 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6">
+        {userAccount && !isSharedPortfolio && isOwnProfile && (
+          <div className="mb-8 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6 relative">
+            {isLoadingUserData && (
+              <div className="absolute inset-0 bg-black/50 backdrop-blur-sm rounded-xl flex items-center justify-center z-10">
+                <div className="flex flex-col items-center gap-3">
+                  <JumpingDots className="text-white text-lg" />
+                  <span className="text-white/80 text-sm">Loading your data...</span>
+                </div>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <ProfilePictureUpload
@@ -1595,7 +1755,7 @@ export default function BuilderPageContent() {
                   href="/leaderboard"
                   className="rounded-md border border-white/20 bg-white/5 hover:bg-white/10 px-4 py-2 text-sm text-white transition-colors"
                 >
-                  🏆 Leaderboard
+                  <FontAwesomeIcon icon={faTrophy} /> Leaderboard
                 </Link>
                 <button
                   onClick={() => handleSharePortfolio(portfolios[0])}

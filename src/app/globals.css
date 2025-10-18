@@ -216,34 +216,53 @@ input, textarea, [contenteditable] {
   }
 }
 
-/* Custom Scrollbar Styles */
+/* Custom Scrollbar Styles - Sleek Gray with Fade Animation */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(45deg, var(--brand-start), var(--brand-end));
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(156, 163, 175, 0.4); /* Gray color */
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(45deg, var(--brand-end), var(--brand-start));
-  box-shadow: 0 0 8px rgba(0, 194, 255, 0.3);
+  background: rgba(156, 163, 175, 0.6); /* Slightly darker gray on hover */
+  opacity: 1;
 }
 
 ::-webkit-scrollbar-corner {
-  background: rgba(255, 255, 255, 0.05);
+  background: transparent;
+}
+
+/* Hide scrollbar arrows */
+::-webkit-scrollbar-button {
+  display: none;
 }
 
 /* Firefox scrollbar styles */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--brand-start) rgba(255, 255, 255, 0.05);
+  scrollbar-color: rgba(156, 163, 175, 0.4) transparent;
+}
+
+/* Scrollbar fade-in/fade-out animation */
+.scrollbar-fade {
+  transition: opacity 0.3s ease;
+}
+
+.scrollbar-fade::-webkit-scrollbar-thumb {
+  opacity: 0;
+}
+
+.scrollbar-fade:hover::-webkit-scrollbar-thumb,
+.scrollbar-fade.scrolling::-webkit-scrollbar-thumb {
+  opacity: 1;
 }

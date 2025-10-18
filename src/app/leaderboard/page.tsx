@@ -4,7 +4,10 @@ import { useState, useEffect, useCallback } from 'react';
 import Logo from '@/components/Logo';
 import Link from 'next/link';
 import TokenImage from '@/components/TokenImage';
+import JumpingDots from '@/components/JumpingDots';
 import { PublicKey } from '@solana/web3.js';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faChartBar, faCrown, faHouse } from '@fortawesome/free-solid-svg-icons';
 
 interface PortfolioStats {
   id: string;
@@ -48,6 +51,7 @@ export default function LeaderboardPage() {
     accountType: 'email' | 'wallet';
     profilePicture?: string;
   } | null>(null);
+  const [isLoadingUserData, setIsLoadingUserData] = useState(false);
 
   // Validation functions (copied from BuilderPageContent)
   function isValidMint(value: string): boolean {
@@ -65,52 +69,103 @@ export default function LeaderboardPage() {
   }
 
 
-  // Load user account from database (no localStorage dependency)
+  // Load user account from database session
   useEffect(() => {
     const loadUserAccount = async () => {
+      setIsLoadingUserData(true);
       try {
-        // Try to get user ID from localStorage as a fallback, but fetch from database
-        const savedUserAccount = localStorage.getItem('userAccount');
-        if (savedUserAccount) {
-          const userData = JSON.parse(savedUserAccount);
-          console.log('👤 Found user ID in localStorage, fetching from database:', userData.id);
-          
-          // Fetch fresh data from database
-          const userResponse = await fetch(`/api/user/${userData.id}`);
-          if (userResponse.ok) {
-            const updatedUserData = await userResponse.json();
-            console.log('👤 Loaded user data from database:', updatedUserData);
-            
-            // Update with fresh data from database
-            setUserAccount(updatedUserData);
-            localStorage.setItem('userAccount', JSON.stringify(updatedUserData));
+        // Check for current user session from database
+        const sessionResponse = await fetch('/api/session');
+        if (sessionResponse.ok) {
+          const sessionData = await sessionResponse.json();
+          if (sessionData.success) {
+            console.log('👤 Found user session, loading user data:', sessionData.user);
+            setUserAccount(sessionData.user);
           } else {
-            console.log('👤 User not found in database, clearing localStorage');
-            localStorage.removeItem('userAccount');
+            console.log('👤 No valid session found');
             setUserAccount(null);
           }
         } else {
-          console.log('👤 No user account found in localStorage');
+          console.log('👤 No session found');
           setUserAccount(null);
         }
       } catch (error) {
         console.error('Failed to load user account:', error);
         setUserAccount(null);
+      } finally {
+        setIsLoadingUserData(false);
       }
     };
     
     loadUserAccount();
   }, []);
 
+  // Refresh session state when page becomes visible (handles navigation from other pages)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Page became visible, refresh session state
+        const refreshSession = async () => {
+          try {
+            const sessionResponse = await fetch('/api/session');
+            if (sessionResponse.ok) {
+              const sessionData = await sessionResponse.json();
+              if (sessionData.success) {
+                setUserAccount(sessionData.user);
+              } else {
+                setUserAccount(null);
+              }
+            } else {
+              setUserAccount(null);
+            }
+          } catch (error) {
+            console.error('Failed to refresh session:', error);
+            setUserAccount(null);
+          }
+        };
+        refreshSession();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   // Dedicated function for pump.fun image fetching (copied from BuilderPageContent)
   const fetchPumpFunImages = useCallback(async (mint: string): Promise<string | null> => {
     console.log('🔍 Trying image sources for Solana token:', mint);
     
-    // For pump tokens, just return the URL directly without validation
+    // For pump tokens, try pump.fun first, then DexScreener for tokens without specific images
     if (mint.toLowerCase().includes('pump')) {
       const pumpUrl = `https://images.pump.fun/coin-image/${mint}?variant=600x600`;
-      console.log('✅ Returning pump.fun URL directly:', pumpUrl);
-      return pumpUrl;
+      console.log('🔍 Testing pump.fun URL for pump token:', pumpUrl);
+      
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        
+        const response = await fetch(pumpUrl, { 
+          method: 'HEAD',
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          console.log('✅ Found specific image from pump.fun URL:', pumpUrl);
+          return pumpUrl;
+        } else {
+          console.log('❌ No specific pump.fun image found, trying DexScreener');
+        }
+      } catch (error) {
+        console.log('❌ Pump.fun URL failed, trying DexScreener:', (error as Error).message);
+      }
+      
+      // Fall back to DexScreener for pump tokens without specific images
+      console.log('🔍 Trying DexScreener for pump token without specific image');
+      // Continue to DexScreener logic below
     }
     
     // For non-pump tokens, try DexScreener first (primary source)
@@ -275,6 +330,11 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     const fetchLeaderboardData = async () => {
+      // Skip during build time to prevent build errors
+      if (typeof window === 'undefined') {
+        return;
+      }
+      
       try {
         const response = await fetch('/api/leaderboard');
         if (response.ok) {
@@ -370,16 +430,21 @@ export default function LeaderboardPage() {
   }, [activeTab]); // Removed currentTab from dependencies to prevent infinite loop
 
   return (
-    <div className="min-h-screen p-6 sm:p-8 md:p-12 pb-16" style={{ fontFamily: 'Golos Text, sans-serif' }}>
+    <div className="min-h-screen p-6 sm:p-8 md:p-12 pb-24" style={{ fontFamily: 'Golos Text, sans-serif' }}>
       <div className="mx-auto w-full max-w-6xl">
         {/* Header with Logo */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
             <Logo />
             <div className="flex items-center gap-4">
-              {userAccount ? (
+              {isLoadingUserData ? (
+                <div className="flex items-center gap-2 px-4 py-2 text-sm text-white/60">
+                  <JumpingDots className="text-white/60" />
+                  <span>Loading profile...</span>
+                </div>
+              ) : userAccount ? (
                 <button 
-                  onClick={() => window.location.href = '/builder'}
+                  onClick={() => window.location.href = '/profile'}
                   className="gradient-button px-4 py-2 text-sm text-white rounded-md flex items-center gap-2"
                 >
                   {userAccount.profilePicture ? (
@@ -397,10 +462,11 @@ export default function LeaderboardPage() {
                 </button>
               ) : (
                 <button 
-                  onClick={() => window.location.href = '/builder'}
-                  className="gradient-button px-4 py-2 text-sm text-white rounded-md"
+                  onClick={() => window.location.href = '/'}
+                  className="gradient-button px-4 py-2 text-sm text-white rounded-md flex items-center gap-2"
                 >
-                  ← Profile
+                  <FontAwesomeIcon icon={faHouse} />
+                  Home
                 </button>
               )}
             </div>
@@ -412,28 +478,28 @@ export default function LeaderboardPage() {
         </div>
 
         {/* Weekly Timer */}
-        <div className="mb-8 bg-gradient-to-r from-[var(--brand-start)] to-[var(--brand-end)] rounded-xl p-6">
+        <div className="mb-8 bg-gradient-to-r from-[var(--brand-start)] to-[var(--brand-end)] rounded-xl p-4 sm:p-6">
           <div className="text-center">
-            <h2 className="text-xl font-semibold text-white mb-4">Weekly Competition Ends In</h2>
-            <div className="flex items-center justify-center gap-4 text-2xl font-bold text-white">
-              <div className="bg-white/20 rounded-lg px-4 py-2">
-                <div className="text-sm text-white/80">Days</div>
+            <h2 className="text-lg sm:text-xl font-semibold text-white mb-4">Weekly Competition Ends In</h2>
+            <div className="flex items-center justify-center gap-2 sm:gap-4 text-lg sm:text-2xl font-bold text-white">
+              <div className="bg-white/20 rounded-lg px-2 sm:px-4 py-2">
+                <div className="text-xs sm:text-sm text-white/80">Days</div>
                 <div>{timeLeft.days}</div>
               </div>
-              <div className="bg-white/20 rounded-lg px-4 py-2">
-                <div className="text-sm text-white/80">Hours</div>
+              <div className="bg-white/20 rounded-lg px-2 sm:px-4 py-2">
+                <div className="text-xs sm:text-sm text-white/80">Hours</div>
                 <div>{timeLeft.hours}</div>
               </div>
-              <div className="bg-white/20 rounded-lg px-4 py-2">
-                <div className="text-sm text-white/80">Minutes</div>
+              <div className="bg-white/20 rounded-lg px-2 sm:px-4 py-2">
+                <div className="text-xs sm:text-sm text-white/80">Minutes</div>
                 <div>{timeLeft.minutes}</div>
               </div>
-              <div className="bg-white/20 rounded-lg px-4 py-2">
-                <div className="text-sm text-white/80">Seconds</div>
+              <div className="bg-white/20 rounded-lg px-2 sm:px-4 py-2">
+                <div className="text-xs sm:text-sm text-white/80">Seconds</div>
                 <div>{timeLeft.seconds}</div>
               </div>
             </div>
-            <p className="text-white/80 text-sm mt-4">
+            <p className="text-white/80 text-xs sm:text-sm mt-4">
               Winner gets 20% of pump.fun weekly rewards pool
             </p>
           </div>
@@ -445,14 +511,14 @@ export default function LeaderboardPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as 'mostShared' | 'bestPerforming' | 'mostDiverse')}
-              className={`flex-1 py-3 px-4 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 py-2 sm:py-3 px-2 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                 activeTab === tab.id
                   ? 'bg-[var(--brand-end)] text-white'
                   : 'text-white/60 hover:text-white hover:bg-white/5'
               }`}
             >
               <div className="text-center">
-                <div>{tab.label}</div>
+                <div className="truncate">{tab.label}</div>
               </div>
             </button>
           ))}
@@ -461,22 +527,27 @@ export default function LeaderboardPage() {
         {/* Leaderboard Content */}
         {loading ? (
           <div className="text-center py-16">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--brand-end)] mx-auto"></div>
-            <p className="text-white/60 mt-4">Loading leaderboard...</p>
+            <div className="flex flex-col items-center gap-4">
+              <JumpingDots className="text-white text-2xl" />
+              <p className="text-white/60">Loading leaderboard...</p>
+            </div>
           </div>
         ) : (
           <div className="space-y-6">
             {currentTab?.data && currentTab.data.length > 0 ? (
               currentTab.data.map((portfolio, index) => (
-                <div key={portfolio.id} className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6">
+                <div key={portfolio.id} className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-4 sm:p-6">
                   {/* Portfolio Header */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[var(--brand-end)] flex items-center justify-center text-white font-bold text-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                    <div className="flex items-center gap-3 sm:gap-4 flex-1">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-[var(--brand-end)] flex items-center justify-center text-white font-bold text-xs sm:text-sm">
                           {index + 1}
                         </div>
-                        <div className="w-10 h-10 rounded-full overflow-hidden">
+                        <Link 
+                          href={`/${portfolio.username}`}
+                          className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden hover:opacity-80 transition-opacity cursor-pointer"
+                        >
                           {portfolio.profilePicture ? (
                             <img
                               src={portfolio.profilePicture}
@@ -484,16 +555,21 @@ export default function LeaderboardPage() {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <div className="w-full h-full bg-gradient-to-r from-[var(--brand-start)] to-[var(--brand-end)] flex items-center justify-center text-white font-bold text-sm">
+                            <div className="w-full h-full bg-gradient-to-r from-[var(--brand-start)] to-[var(--brand-end)] flex items-center justify-center text-white font-bold text-xs sm:text-sm">
                               {portfolio.username.charAt(0).toUpperCase()}
                             </div>
                           )}
-                        </div>
-                        <h3 className="text-lg font-medium text-white">{portfolio.name}</h3>
+                        </Link>
+                        <h3 className="text-base sm:text-lg font-medium text-white truncate">{portfolio.name}</h3>
                       </div>
                       
-                      <div className="flex items-center gap-4 text-sm text-white/60">
-                        <span>by {portfolio.username}</span>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-white/60">
+                        <Link 
+                          href={`/${portfolio.username}`}
+                          className="truncate hover:text-white transition-colors cursor-pointer"
+                        >
+                          by {portfolio.username}
+                        </Link>
                         {activeTab === 'mostShared' && (
                           <>
                             <span>{portfolio.shares} shares</span>
@@ -524,13 +600,13 @@ export default function LeaderboardPage() {
                     <div className="flex items-center gap-3">
                       {index === 0 && activeTab === 'mostShared' && (
                         <div className="flex items-center gap-1 text-yellow-400">
-                          <span className="text-lg">👑</span>
-                          <span className="text-sm font-medium">Weekly Leader</span>
+                          <span className="text-white text-base sm:text-lg"><FontAwesomeIcon icon={faCrown} /></span>
+                          <span className="text-xs sm:text-sm font-medium">Weekly Leader</span>
                         </div>
                       )}
                       <Link
                         href={`/share/${portfolio.id}`}
-                        className="rounded-md bg-[var(--brand-end)] hover:bg-[var(--brand-start)] px-4 py-2 text-sm text-white transition-colors"
+                        className="rounded-md bg-[var(--brand-end)] hover:bg-[var(--brand-start)] px-3 sm:px-4 py-2 text-xs sm:text-sm text-white transition-colors"
                       >
                         View Portfolio
                       </Link>
@@ -540,9 +616,9 @@ export default function LeaderboardPage() {
                   {/* Portfolio Tokens Preview */}
                   {portfolio.rows && portfolio.rows.length > 0 && (
                     <div className="mt-4 pt-4 border-t border-white/10">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-white/60">Portfolio:</span>
-                        <div className="flex items-center gap-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <span className="text-xs sm:text-sm text-white/60">Portfolio:</span>
+                        <div className="flex flex-wrap items-center gap-2">
                           {portfolio.rows.slice(0, 3).map((row, tokenIndex) => {
                             const meta = tokenMeta[row.mint];
                             console.log(`🖼️ Rendering token ${row.mint}:`, {
@@ -557,11 +633,11 @@ export default function LeaderboardPage() {
                                     key={`${row.mint}-${activeTab}-${tabChangeKey}`}
                                     src={meta.logoURI}
                                     alt={meta?.symbol || "Token"}
-                                    className="w-6 h-6 rounded-full"
+                                    className="w-5 h-5 sm:w-6 sm:h-6 rounded-full"
                                     fallbackSrc="/placeholder-token.svg"
                                   />
                                 ) : (
-                                  <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-white text-xs">
+                                  <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-gray-600 flex items-center justify-center text-white text-xs">
                                     ?
                                   </div>
                                 )}
@@ -591,7 +667,7 @@ export default function LeaderboardPage() {
                   </p>
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                     <Link
-                      href="/builder"
+                      href="/profile"
                       className="rounded-lg bg-[var(--brand-end)] hover:bg-[var(--brand-start)] px-8 py-4 text-lg font-medium text-white transition-colors"
                     >
                       Create Portfolio
@@ -609,14 +685,14 @@ export default function LeaderboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white/10 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-yellow-400 text-lg">👑</span>
+                <span className="text-white text-lg"><FontAwesomeIcon icon={faCrown} /></span>
                 <h3 className="font-medium text-white">Weekly Winner</h3>
               </div>
               <p className="text-white/80 text-sm">Most viewed portfolio gets 20% of pump.fun weekly rewards</p>
             </div>
             <div className="bg-white/10 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-blue-400 text-lg">📈</span>
+                <span className="text-white text-lg"><FontAwesomeIcon icon={faChartBar} /></span>
                 <h3 className="font-medium text-white">Competition</h3>
               </div>
               <p className="text-white/80 text-sm">Reset every Monday at midnight UTC</p>

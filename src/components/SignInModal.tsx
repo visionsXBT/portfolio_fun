@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import JumpingDots from './JumpingDots';
 
 interface SignInModalProps {
   isOpen: boolean;
@@ -107,7 +108,11 @@ export default function SignInModal({ isOpen, onClose, onSuccess, onSwitchToSign
               disabled={isLoading}
               className="flex-1 rounded-md bg-[var(--brand-end)] hover:bg-[var(--brand-start)] px-4 py-2 text-sm text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? "Signing In..." : "Sign In"}
+              {isLoading ? (
+                <div className="flex items-center justify-center">
+                  <JumpingDots className="text-white" />
+                </div>
+              ) : "Sign In"}
             </button>
           </div>
 
