@@ -250,7 +250,7 @@ export default function SettingsPage() {
       )}
 
             {/* Main Content */}
-            <div className="flex-1 lg:ml-48 lg:pl-0 p-4 sm:p-6 md:p-8 pb-16 pt-16" style={{ paddingTop: '32px' }}>
+            <div className="flex-1 lg:ml-48 lg:pl-0 p-4 sm:p-6 md:p-8 pb-16 pt-16 lg:pt-8">
         <div className="w-full">
           {/* Header */}
           <div className="mb-4">
