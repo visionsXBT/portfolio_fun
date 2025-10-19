@@ -982,7 +982,12 @@ export default function UsernamePage() {
                             </span>
                             {stats.avgMarketCap > 0 && (
                               <span className="text-blue-400">
-                                ${stats.avgMarketCap.toLocaleString()}
+                                ${stats.avgMarketCap >= 1e9
+                                  ? `${(stats.avgMarketCap / 1e9).toFixed(1)}B`
+                                  : stats.avgMarketCap >= 1e6
+                                  ? `${(stats.avgMarketCap / 1e6).toFixed(1)}M`
+                                  : `${(stats.avgMarketCap / 1e3).toFixed(1)}K`
+                                }
                               </span>
                             )}
                           </>
@@ -1054,9 +1059,34 @@ export default function UsernamePage() {
                       
                     </div>
 
-                  {/* Token List */}
+                  {/* Add Token Input - MOVED TO TOP */}
+                  {currentUserSession && currentUserSession.username === username && (
+                    <div className="mt-4">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                        <input
+                          type="text"
+                          value={portfolioInputs[portfolio.id] || ""}
+                          onChange={(e) => setPortfolioInputs(prev => ({ ...prev, [portfolio.id]: e.target.value }))}
+                          placeholder="Paste Solana or BNB token contract address..."
+                          className="flex-1 rounded-md border border-white/20 bg-white/5 text-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleAddToken(portfolio.id);
+                          }}
+                        />
+                        <button
+                          onClick={() => handleAddToken(portfolio.id)}
+                          disabled={!extractMintFromInput(portfolioInputs[portfolio.id] || "")}
+                          className="rounded-md gradient-button px-4 py-2 text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                        >
+                          Add Token
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Token List - MOVED TO BOTTOM */}
                   {portfolio.rows.length > 0 && (
-                    <div className="space-y-2">
+                    <div className="space-y-2 mt-4">
                       {portfolio.rows.map((row) => {
                         const meta = extraMeta[row.mint] || tokenMeta[row.mint];
                         const priceChange = meta?.priceChange24h || priceChanges24h[row.mint] || 0;
@@ -1099,7 +1129,12 @@ export default function UsernamePage() {
                                 </div>
                                 {marketCap > 0 && (
                                   <div className="text-white/60 text-sm">
-                                    ${marketCap.toLocaleString()}
+                                    ${marketCap >= 1e9
+                                      ? `${(marketCap / 1e9).toFixed(1)}B`
+                                      : marketCap >= 1e6
+                                      ? `${(marketCap / 1e6).toFixed(1)}M`
+                                      : `${(marketCap / 1e3).toFixed(1)}K`
+                                    }
                                   </div>
                                 )}
                               </div>
@@ -1115,31 +1150,6 @@ export default function UsernamePage() {
                           </div>
                         );
                       })}
-                    </div>
-                  )}
-
-                  {/* Add Token Input - Builder Style */}
-                  {currentUserSession && currentUserSession.username === username && (
-                    <div className="mt-4">
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                        <input
-                          type="text"
-                          value={portfolioInputs[portfolio.id] || ""}
-                          onChange={(e) => setPortfolioInputs(prev => ({ ...prev, [portfolio.id]: e.target.value }))}
-                          placeholder="Paste Solana or BNB token contract address..."
-                          className="flex-1 rounded-md border border-white/20 bg-white/5 text-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleAddToken(portfolio.id);
-                          }}
-                        />
-                        <button
-                          onClick={() => handleAddToken(portfolio.id)}
-                          disabled={!extractMintFromInput(portfolioInputs[portfolio.id] || "")}
-                          className="rounded-md gradient-button px-4 py-2 text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-                        >
-                          Add Token
-                        </button>
-                      </div>
                     </div>
                   )}
                 </div>
@@ -1193,6 +1203,9 @@ export default function UsernamePage() {
             avgMarketCap: portfolioStats.find(stat => stat.portfolio.id === selectedPortfolioForShare.id)?.avgMarketCap || 0,
             change24h: portfolioStats.find(stat => stat.portfolio.id === selectedPortfolioForShare.id)?.change24h || 0
           }}
+          tokenMeta={tokenMeta}
+          extraMeta={extraMeta}
+          userId={currentUserSession?.userId}
         />
       )}
     </div>

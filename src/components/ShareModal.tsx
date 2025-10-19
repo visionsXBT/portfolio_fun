@@ -123,13 +123,13 @@ export default function ShareModal({ isOpen, onClose, portfolio, portfolioStats,
                 {portfolio.rows.slice(0, 4).map((row) => {
                   const meta = tokenMeta[row.mint] || extraMeta[row.mint];
                   return (
-                    <div key={row.mint} className="w-16 h-16 sm:w-32 sm:h-32 overflow-hidden">
+                    <div key={row.mint} className="w-16 h-16 sm:w-32 sm:h-32 overflow-hidden rounded-lg border border-white/20">
                       <Image 
                         src={meta?.logoURI || '/placeholder-token.svg'} 
                         alt={meta?.symbol || 'Token'} 
                         width={128}
                         height={128}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain bg-white/5"
                       />
                     </div>
                   );

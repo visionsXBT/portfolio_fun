@@ -1121,13 +1121,20 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
       return;
     }
 
-    // Add the token immediately
+    // Add the token immediately to the END of the array
     setPortfolios((prev) => {
-      const updated = prev.map((p) =>
-        p.id === portfolioId
-          ? { ...p, rows: [...p.rows, { mint }] }
-          : p
-      );
+      const updated = prev.map((p) => {
+        if (p.id === portfolioId) {
+          // Ensure we're adding to the END of the array
+          const newRows = [...p.rows, { mint }];
+          console.log('➕ Adding token to portfolio:', portfolioId);
+          console.log('➕ Previous rows:', p.rows.map(r => r.mint));
+          console.log('➕ New rows:', newRows.map(r => r.mint));
+          console.log('➕ Token being added:', mint);
+          return { ...p, rows: newRows };
+        }
+        return p;
+      });
       console.log('➕ Updated portfolios after adding token:', updated);
       return updated;
     });
@@ -1312,47 +1319,53 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
     if (userAccount) {
       try {
         console.log('💾 Saving portfolio immediately after adding token');
-        // Get the updated portfolios state
-        const updatedPortfolios = portfolios.map(p =>
-          p.id === portfolioId
-            ? { ...p, rows: [...p.rows, { mint }] }
-            : p
-        );
-        
-        const portfoliosWithStats = updatedPortfolios.map(portfolio => {
-          const portfolioMints = portfolio.rows.map(r => r.mint);
-          
-          const portfolioChanges = portfolioMints.map(mint => {
-            const meta = extraMeta[mint] || tokenMeta[mint];
-            return meta?.priceChange24h || priceChanges24h[mint] || 0;
-          });
-          const avgChange = portfolioChanges.length > 0 
-            ? portfolioChanges.reduce((sum, change) => sum + change, 0) / portfolioChanges.length 
-            : 0;
-          
-          const portfolioMarketCaps = portfolioMints.map(mint => {
-            const meta = extraMeta[mint] || tokenMeta[mint];
-            return meta?.marketCap || marketCaps[mint] || 0;
-          });
-          const avgMarketCap = portfolioMarketCaps.length > 0 
-            ? portfolioMarketCaps.reduce((sum, marketCap) => sum + marketCap, 0) / portfolioMarketCaps.length 
-            : 0;
-          
-          return {
-            ...portfolio,
-            avgChange,
-            avgMarketCap,
-            views: portfolio.views || 0,
-            shares: portfolio.shares || 0
-          };
-        });
+        // Use setTimeout to ensure the state has been updated
+        setTimeout(async () => {
+          try {
+            const updatedPortfolios = portfolios.map(p =>
+              p.id === portfolioId
+                ? { ...p, rows: [...p.rows, { mint }] }
+                : p
+            );
+            
+            const portfoliosWithStats = updatedPortfolios.map(portfolio => {
+              const portfolioMints = portfolio.rows.map(r => r.mint);
+              
+              const portfolioChanges = portfolioMints.map(mint => {
+                const meta = extraMeta[mint] || tokenMeta[mint];
+                return meta?.priceChange24h || priceChanges24h[mint] || 0;
+              });
+              const avgChange = portfolioChanges.length > 0 
+                ? portfolioChanges.reduce((sum, change) => sum + change, 0) / portfolioChanges.length 
+                : 0;
+              
+              const portfolioMarketCaps = portfolioMints.map(mint => {
+                const meta = extraMeta[mint] || tokenMeta[mint];
+                return meta?.marketCap || marketCaps[mint] || 0;
+              });
+              const avgMarketCap = portfolioMarketCaps.length > 0 
+                ? portfolioMarketCaps.reduce((sum, marketCap) => sum + marketCap, 0) / portfolioMarketCaps.length 
+                : 0;
+              
+              return {
+                ...portfolio,
+                avgChange,
+                avgMarketCap,
+                views: portfolio.views || 0,
+                shares: portfolio.shares || 0
+              };
+            });
 
-        await fetch(`/api/user/${userAccount.id}/portfolios`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ portfolios: portfoliosWithStats })
-        });
-        console.log('✅ Portfolio saved immediately after adding token');
+            await fetch(`/api/user/${userAccount.id}/portfolios`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ portfolios: portfoliosWithStats })
+            });
+            console.log('✅ Portfolio saved immediately after adding token');
+          } catch (error) {
+            console.error('❌ Failed to save portfolio after adding token:', error);
+          }
+        }, 100);
       } catch (error) {
         console.error('❌ Failed to save portfolio after adding token:', error);
       }
@@ -1934,11 +1947,37 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
 
                   {/* Portfolio Content */}
                   {portfolio.isExpanded && (
-                    <div className="space-y-4">
-                      {/* Token List */}
+                    <div className="space-y-4" key={`portfolio-content-${portfolio.id}`}>
+                      {/* Add Token Input - MOVED TO TOP */}
+                      {!isSharedPortfolio && (
+                        <div className="flex gap-3">
+                          {console.log('🎯 RENDERING INPUT FORM FIRST')}
+                          <input
+                            type="text"
+                            value={portfolioInputs[portfolio.id] || ""}
+                            onChange={(e) => setPortfolioInputs(prev => ({ ...prev, [portfolio.id]: e.target.value }))}
+                            placeholder="Paste Solana or BNB token contract address..."
+                            className="flex-1 rounded-md border border-white/20 bg-white/5 text-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") addRow(portfolio.id);
+                            }}
+                          />
+                          <button
+                            onClick={() => addRow(portfolio.id)}
+                            disabled={!extractMintFromInput(portfolioInputs[portfolio.id] || "")}
+                            className="rounded-md gradient-button px-4 py-2 text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Add Token
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Token List - MOVED TO BOTTOM */}
                       {portfolio.rows.length > 0 && (
                         <div className="space-y-2">
-                          {portfolio.rows.map((row) => {
+                         
+                          {portfolio.rows.map((row, index) => {
+                            console.log('🎯 Rendering token at index:', index, 'mint:', row.mint);
                             const meta = extraMeta[row.mint] || tokenMeta[row.mint];
                             const change24h = meta?.priceChange24h || priceChanges24h[row.mint];
                             const marketCap = meta?.marketCap || marketCaps[row.mint];
@@ -1988,29 +2027,6 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
                               </div>
                             );
                           })}
-                        </div>
-                      )}
-
-                      {/* Add Token Input */}
-                      {!isSharedPortfolio && (
-                        <div className="flex gap-3">
-                          <input
-                            type="text"
-                            value={portfolioInputs[portfolio.id] || ""}
-                            onChange={(e) => setPortfolioInputs(prev => ({ ...prev, [portfolio.id]: e.target.value }))}
-                            placeholder="Paste Solana or BNB token contract address..."
-                            className="flex-1 rounded-md border border-white/20 bg-white/5 text-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") addRow(portfolio.id);
-                            }}
-                          />
-                          <button
-                            onClick={() => addRow(portfolio.id)}
-                            disabled={!extractMintFromInput(portfolioInputs[portfolio.id] || "")}
-                            className="rounded-md gradient-button px-4 py-2 text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            Add Token
-                          </button>
                         </div>
                       )}
                     </div>
