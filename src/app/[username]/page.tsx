@@ -7,13 +7,13 @@ import Image from 'next/image';
 import { PublicKey } from '@solana/web3.js';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrophy, faCopy } from '@fortawesome/free-solid-svg-icons';
-import Logo from '@/components/Logo';
 import TokenImage from '@/components/TokenImage';
 import SignInModal from '@/components/SignInModal';
 import AccountModal from '@/components/AccountModal';
 import UserSearchBar from '@/components/UserSearchBar';
 import ShareModal from '@/components/ShareModal';
 import ProfilePictureUpload from '@/components/ProfilePictureUpload';
+import NavigationBar from '@/components/NavigationBar';
 
 // Helper functions for token validation
 function isValidMint(value: string): boolean {
@@ -732,15 +732,22 @@ export default function UsernamePage() {
   }
 
   return (
-    <div className="min-h-screen p-6 sm:p-8 md:p-12 pb-16" style={{ fontFamily: 'Golos Text, sans-serif' }}>
-      <div className="mx-auto w-full max-w-6xl">
-                {/* Header with Logo */}
-                <div className="mb-8">
-                  <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
-                    <Logo />
-                    
+    <div className="min-h-screen flex" style={{ fontFamily: 'Golos Text, sans-serif' }}>
+      {/* Navigation Bar */}
+      <NavigationBar 
+        username={username} 
+        profilePicture={userData?.profilePicture}
+        isCurrentUser={currentUserSession?.username === username}
+      />
+      
+            {/* Main Content */}
+            <div className="flex-1 lg:ml-48 lg:pl-0 p-4 sm:p-6 md:p-8 pb-16 pt-16" style={{ paddingTop: '32px' }}>
+        <div className="w-full">
+                {/* Header */}
+                <div className="mb-4">
+                  <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-4">
                     {/* Search Bar */}
-                    <div className="w-full sm:flex-1 sm:max-w-md sm:mx-6 order-2 sm:order-1">
+                    <div className="w-full sm:flex-1 sm:max-w-md order-2 sm:order-1">
                       <UserSearchBar />
                     </div>
                     
@@ -781,10 +788,10 @@ export default function UsernamePage() {
                       )}
                     </div>
                   </div>
-          <h1 className="text-3xl font-semibold mb-2">
+          <h1 className="text-2xl font-semibold mb-1">
             {currentUserSession && currentUserSession.username === username ? 'My Portfolios' : `${username}'s Portfolios`}
           </h1>
-          <p className="text-white/60">
+          <p className="text-white/60 text-sm">
             {currentUserSession && currentUserSession.username === username 
               ? 'Manage and edit your portfolios below. Click on any portfolio to edit it.'
               : `Viewing all portfolios by ${username}. Sign in to create and edit your own portfolios.`
@@ -793,7 +800,7 @@ export default function UsernamePage() {
         </div>
 
         {/* User Profile Section */}
-        <div className="mb-8 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6">
+        <div className="mb-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
               {currentUserSession && currentUserSession.username === username ? (
@@ -838,46 +845,24 @@ export default function UsernamePage() {
                 <FontAwesomeIcon icon={faTrophy} /> Leaderboard
               </Link>
               {currentUserSession && currentUserSession.username === username && (
-                <>
-                  <button
-                    onClick={handleCreatePortfolio}
-                    className="gradient-button px-4 py-2 text-sm text-white rounded-md w-full sm:w-auto"
-                  >
-                    Create New Portfolio
-                  </button>
-                  <button
-                    onClick={async () => {
-                      try {
-                        const response = await fetch('/api/session', {
-                          method: 'DELETE'
-                        });
-                        if (response.ok) {
-                          // Clear local session state
-                          setCurrentUserSession(null);
-                          // Redirect to landing page
-                          router.push('/');
-                        }
-                      } catch (error) {
-                        console.error('Failed to sign out:', error);
-                      }
-                    }}
-                    className="rounded-md border border-red-500/50 bg-red-500/10 hover:bg-red-500/20 px-4 py-2 text-sm text-red-400 transition-colors w-full sm:w-auto"
-                  >
-                    Sign Out
-                  </button>
-                </>
+                <button
+                  onClick={handleCreatePortfolio}
+                  className="gradient-button px-4 py-2 text-sm text-white rounded-md w-full sm:w-auto"
+                >
+                  Create New Portfolio
+                </button>
               )}
             </div>
           </div>
         </div>
 
         {!userData?.portfolios || userData?.portfolios?.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="mb-8">
-              <h2 className="text-2xl font-semibold text-white mb-4">
+          <div className="text-center py-8">
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold text-white mb-2">
                 {currentUserSession && currentUserSession.username === username ? 'No portfolios yet' : 'No portfolios yet'}
               </h2>
-              <p className="text-white/60 mb-8">
+              <p className="text-white/60 mb-4 text-sm">
                 {currentUserSession && currentUserSession.username === username 
                   ? 'Create your first portfolio to get started!'
                   : `${username} hasn't created any portfolios yet.`
@@ -887,14 +872,14 @@ export default function UsernamePage() {
                 {currentUserSession && currentUserSession.username === username ? (
                   <button
                     onClick={handleCreatePortfolio}
-                    className="rounded-lg gradient-button px-8 py-4 text-lg font-medium text-white"
+                    className="rounded-lg gradient-button px-6 py-3 text-base font-medium text-white"
                   >
                     Create Your First Portfolio
                   </button>
                 ) : (
                   <Link
                     href="/"
-                    className="rounded-lg gradient-button px-8 py-4 text-lg font-medium text-white"
+                    className="rounded-lg gradient-button px-6 py-3 text-base font-medium text-white"
                   >
                     Create Your Own Portfolio
                   </Link>
@@ -903,7 +888,7 @@ export default function UsernamePage() {
             </div>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {userData.portfolios.map((portfolio) => {
               const stats = portfolioStats.find(s => s.portfolio.id === portfolio.id);
               const visibleTokens = portfolio.rows.slice(0, 4);
@@ -1208,6 +1193,7 @@ export default function UsernamePage() {
           userId={currentUserSession?.userId}
         />
       )}
+      </div>
     </div>
   );
 }

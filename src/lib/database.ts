@@ -32,7 +32,7 @@ export async function createAccount(username: string, password: string): Promise
     const db = await connectToDatabase();
     const users = db.collection<UserAccount>('users');
     
-    // Check if username already exists
+    // Check if username already exists (case-sensitive)
     const existingUser = await users.findOne({ username });
     if (existingUser) {
       throw new Error('Username already exists');

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAccount, authenticateUser } from '@/lib/database';
 import { connectToDatabase } from '@/lib/mongodb';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 
 // Helper function to create a session
 async function createSession(userId: string, username: string) {
@@ -31,7 +32,7 @@ async function createSession(userId: string, username: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { action, username, password } = await request.json();
+    const { action, username, password, currentPassword, newPassword } = await request.json();
 
     if (action === 'signup') {
       const user = await createAccount(username, password);
@@ -89,6 +90,87 @@ export async function POST(request: NextRequest) {
           error: 'Invalid username or password' 
         }, { status: 401 });
       }
+    }
+
+    if (action === 'logout') {
+      // Clear the session cookie
+      const response = NextResponse.json({ success: true });
+      response.cookies.set('sessionToken', '', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 0, // Expire immediately
+        path: '/'
+      });
+      return response;
+    }
+
+    if (action === 'change-password') {
+      // Get session token from cookie
+      const sessionToken = request.cookies.get('sessionToken')?.value;
+      if (!sessionToken) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Not authenticated' 
+        }, { status: 401 });
+      }
+
+      // Verify session
+      const db = await connectToDatabase();
+      if (!db) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Database connection failed' 
+        }, { status: 500 });
+      }
+
+      const session = await db.collection('sessions').findOne({ 
+        sessionToken, 
+        isActive: true,
+        expiresAt: { $gt: new Date() }
+      });
+
+      if (!session) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Invalid session' 
+        }, { status: 401 });
+      }
+
+      // Get user from database
+      const user = await db.collection('users').findOne({ 
+        _id: session.userId 
+      });
+
+      if (!user) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'User not found' 
+        }, { status: 404 });
+      }
+
+      // Verify current password
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isCurrentPasswordValid) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Current password is incorrect' 
+        }, { status: 400 });
+      }
+
+      // Hash new password
+      const hashedNewPassword = await bcrypt.hash(newPassword, 12);
+
+      // Update password in database
+      await db.collection('users').updateOne(
+        { _id: user._id },
+        { $set: { password: hashedNewPassword } }
+      );
+
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Password changed successfully' 
+      });
     }
 
     return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });

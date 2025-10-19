@@ -29,9 +29,9 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Check if username already exists
+    // Check if username already exists (case-sensitive)
     const existingUser = await db.collection('users').findOne({ 
-      username: username.toLowerCase() // Case-insensitive search
+      username: username // Case-sensitive search
     });
 
     if (existingUser) {

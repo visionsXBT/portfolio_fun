@@ -21,9 +21,9 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Find user by username (case-insensitive)
+    // Find user by username (case-sensitive)
     const user = await db.collection('users').findOne({ 
-      username: username.toLowerCase() 
+      username: username 
     });
 
     if (!user) {
