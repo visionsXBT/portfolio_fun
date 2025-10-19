@@ -38,47 +38,49 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center pb-16">
+    <div className="h-screen flex flex-col items-center justify-center overflow-hidden">
       {/* Header with Logo */}
-      <div className="absolute top-0 left-0 p-4 sm:p-6 md:p-8">
+      <div className="absolute top-0 left-0 p-3 sm:p-6 md:p-8 z-10">
         <Logo size="large" />
       </div>
       {/* Hero section */}
-      <section className="px-6 sm:px-8 md:px-12 lg:px-16 xl:px-20 py-8 sm:py-12 md:py-16 lg:py-20">
-        <div className="mx-auto max-w-4xl lg:max-w-5xl xl:max-w-6xl text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm sm:text-base mb-6 sm:mb-8">
-            <span className="inline-block h-2 w-2 rounded-full bg-green-500 led-pulse" />
+      <section className="flex-1 flex flex-col items-center justify-center px-4 sm:px-8 md:px-12 lg:px-16 xl:px-20 py-4 sm:py-8 md:py-12 lg:py-16 xl:py-20 w-full max-w-7xl mx-auto">
+        <div className="w-full text-center flex flex-col items-center justify-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm md:text-base mb-4 sm:mb-6 md:mb-8">
+            <span className="inline-block h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-green-500 led-pulse" />
             Build portfolios of any kind with onPort
           </div>
           
           {/* Hero Image */}
-          <div className="mb-8 sm:mb-10 md:mb-12 lg:mb-16 flex justify-center">
-            <Image
-              src="/header_text.png"
-              alt="Shill your bags in a fun way. No matter the chain."
-              width={1200}
-              height={600}
-              className="max-w-full h-auto w-full max-w-4xl"
-              priority
-            />
+          <div className="mb-6 sm:mb-8 md:mb-10 lg:mb-12 xl:mb-16 flex justify-center w-full">
+            <div className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-2xl">
+              <Image
+                src="/header_text.png"
+                alt="Shill your bags in a fun way. No matter the chain."
+                width={1200}
+                height={600}
+                className="w-full h-auto object-contain"
+                priority
+              />
+            </div>
           </div>
           
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
-            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+          <div className="flex flex-col items-center justify-center gap-3 sm:gap-4 md:gap-6 w-full max-w-md sm:max-w-lg">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 md:gap-4 w-full">
               <button 
                 onClick={() => setShowSignInModal(true)}
-                className="rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 px-6 py-3 sm:px-8 sm:py-4 md:px-10 md:py-5 text-sm sm:text-base md:text-lg font-medium text-white transition-colors"
+                className="w-full sm:w-auto rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 px-4 py-2.5 sm:px-6 sm:py-3 md:px-8 md:py-4 text-xs sm:text-sm md:text-base font-medium text-white transition-colors"
               >
                 Sign In
               </button>
               <button 
                 onClick={() => setShowAccountModal(true)}
-                className="rounded-lg gradient-button px-6 py-3 sm:px-8 sm:py-4 md:px-10 md:py-5 text-sm sm:text-base md:text-lg font-medium text-white"
+                className="w-full sm:w-auto rounded-lg gradient-button px-4 py-2.5 sm:px-6 sm:py-3 md:px-8 md:py-4 text-xs sm:text-sm md:text-base font-medium text-white"
               >
                 Create Account
               </button>
             </div>
-            <Link href="/leaderboard" className="rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 px-6 py-3 sm:px-8 sm:py-4 md:px-10 md:py-5 text-sm sm:text-base md:text-lg font-medium text-white transition-colors">
+            <Link href="/leaderboard" className="w-full sm:w-auto rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 px-4 py-2.5 sm:px-6 sm:py-3 md:px-8 md:py-4 text-xs sm:text-sm md:text-base font-medium text-white transition-colors text-center">
               <FontAwesomeIcon icon={faTrophy} /> View Leaderboard
             </Link>
           </div>
