@@ -7,6 +7,8 @@ import { PublicKey } from '@solana/web3.js';
 import Logo from '@/components/Logo';
 import TokenImage from '@/components/TokenImage';
 import Image from 'next/image';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCopy } from '@fortawesome/free-solid-svg-icons';
 import SignInModal from '@/components/SignInModal';
 import AccountModal from '@/components/AccountModal';
 
@@ -65,6 +67,7 @@ export default function PublicPortfolioView() {
   } | null>(null);
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
+  const [copiedMintAddress, setCopiedMintAddress] = useState<string | null>(null);
 
   // Dedicated function for pump.fun image fetching (copied from main page)
   const fetchPumpFunImages = useCallback(async (mint: string): Promise<string | null> => {
@@ -345,6 +348,20 @@ export default function PublicPortfolioView() {
     console.log('❌ No BNB token images found for address:', address);
     return null;
   }, [scrapeFourMemeImage]);
+
+  // Handle copying contract address
+  const handleCopyContractAddress = useCallback(async (mintAddress: string) => {
+    try {
+      await navigator.clipboard.writeText(mintAddress);
+      setCopiedMintAddress(mintAddress);
+      // Reset the copied state after 2 seconds
+      setTimeout(() => {
+        setCopiedMintAddress(null);
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy contract address:', err);
+    }
+  }, []);
 
   // Load user session
   useEffect(() => {
@@ -749,8 +766,20 @@ export default function PublicPortfolioView() {
                               <div className="font-medium text-white">
                                 {meta?.symbol || 'Unknown'}
                               </div>
-                              <div className="text-sm text-white/60">
-                                {meta?.name || row.mint.slice(0, 8) + '...'}
+                              <div className="flex items-center gap-2">
+                                <div className="text-sm text-white/60">
+                                  {meta?.name || row.mint.slice(0, 8) + '...'}
+                                </div>
+                                <button
+                                  onClick={() => handleCopyContractAddress(row.mint)}
+                                  className="text-white/40 hover:text-white/60 transition-colors flex-shrink-0"
+                                  title="Copy contract address"
+                                >
+                                  <FontAwesomeIcon icon={faCopy} className="w-3 h-3" />
+                                </button>
+                                {copiedMintAddress === row.mint && (
+                                  <span className="text-green-400 text-xs">Copied!</span>
+                                )}
                               </div>
                             </div>
                           </div>

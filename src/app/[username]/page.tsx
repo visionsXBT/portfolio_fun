@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { PublicKey } from '@solana/web3.js';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrophy } from '@fortawesome/free-solid-svg-icons';
+import { faTrophy, faCopy } from '@fortawesome/free-solid-svg-icons';
 import Logo from '@/components/Logo';
 import TokenImage from '@/components/TokenImage';
 import SignInModal from '@/components/SignInModal';
@@ -93,6 +93,7 @@ export default function UsernamePage() {
   const [editingPortfolioId, setEditingPortfolioId] = useState<string | null>(null);
   const [editingPortfolioName, setEditingPortfolioName] = useState<string>('');
   const [portfolioInputs, setPortfolioInputs] = useState<Record<string, string>>({});
+  const [copiedMintAddress, setCopiedMintAddress] = useState<string | null>(null);
 
   // Handle portfolio editing
   const handleEditPortfolio = (portfolio: Portfolio) => {
@@ -109,6 +110,20 @@ export default function UsernamePage() {
   const handleCloseShareModal = useCallback(() => {
     setShowShareModal(false);
     setSelectedPortfolioForShare(null);
+  }, []);
+
+  // Handle copying contract address
+  const handleCopyContractAddress = useCallback(async (mintAddress: string) => {
+    try {
+      await navigator.clipboard.writeText(mintAddress);
+      setCopiedMintAddress(mintAddress);
+      // Reset the copied state after 2 seconds
+      setTimeout(() => {
+        setCopiedMintAddress(null);
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy contract address:', err);
+    }
   }, []);
 
   // Handle portfolio deletion
@@ -1060,8 +1075,20 @@ export default function UsernamePage() {
                                 <div className="text-white font-medium truncate">
                                   {meta?.symbol || "Unknown"}
                                 </div>
-                                <div className="text-white/60 text-sm truncate">
-                                  {row.mint.slice(0, 8)}...{row.mint.slice(-8)}
+                                <div className="flex items-center gap-2">
+                                  <div className="text-white/60 text-sm truncate">
+                                    {row.mint.slice(0, 8)}...{row.mint.slice(-8)}
+                                  </div>
+                                  <button
+                                    onClick={() => handleCopyContractAddress(row.mint)}
+                                    className="text-white/40 hover:text-white/60 transition-colors flex-shrink-0"
+                                    title="Copy contract address"
+                                  >
+                                    <FontAwesomeIcon icon={faCopy} className="w-3 h-3" />
+                                  </button>
+                                  {copiedMintAddress === row.mint && (
+                                    <span className="text-green-400 text-xs">Copied!</span>
+                                  )}
                                 </div>
                               </div>
                             </div>

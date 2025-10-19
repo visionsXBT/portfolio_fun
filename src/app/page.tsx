@@ -14,10 +14,35 @@ export default function Home() {
   const router = useRouter();
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
 
-  // Warm up database connection on landing page load
+  // Check user session and redirect if logged in
   useEffect(() => {
-    const warmupDatabase = async () => {
+    const checkUserSession = async () => {
+      try {
+        console.log('🔍 Checking user session on landing page...');
+        const sessionResponse = await fetch('/api/session');
+        
+        if (sessionResponse.ok) {
+          const sessionData = await sessionResponse.json();
+          if (sessionData.success && sessionData.user?.username) {
+            console.log('✅ User is logged in, redirecting to profile:', sessionData.user.username);
+            // Redirect to user's profile page
+            router.push(`/${sessionData.user.username}`);
+            return;
+          }
+        }
+        
+        console.log('👤 No valid session found, staying on landing page');
+        setIsCheckingSession(false);
+      } catch (error) {
+        console.error('❌ Failed to check user session:', error);
+        setIsCheckingSession(false);
+      }
+    };
+
+    // Warm up database connection and check session
+    const initializePage = async () => {
       try {
         console.log('🔥 Starting database warmup from landing page...');
         const response = await fetch('/api/warmup-db');
@@ -31,11 +56,22 @@ export default function Home() {
       } catch (error) {
         console.warn('⚠️ Database warmup request failed:', error);
       }
+
+      // Check user session after database warmup
+      await checkUserSession();
     };
 
-    // Warm up database connection
-    warmupDatabase();
-  }, []);
+    initializePage();
+  }, [router]);
+
+  // Show loading state while checking session
+  if (isCheckingSession) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center overflow-hidden">
+        <div className="text-white/60">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex flex-col items-center justify-center overflow-hidden">
@@ -52,8 +88,8 @@ export default function Home() {
           </div>
           
           {/* Hero Image */}
-          <div className="mb-6 sm:mb-8 md:mb-10 lg:mb-12 xl:mb-16 flex justify-center w-full">
-            <div className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-2xl">
+          <div className="mb-8 md:mb-12 flex justify-center w-full">
+            <div className="w-full max-w-4xl">
               <Image
                 src="/header_text.png"
                 alt="Shill your bags in a fun way. No matter the chain."
@@ -65,22 +101,22 @@ export default function Home() {
             </div>
           </div>
           
-          <div className="flex flex-col items-center justify-center gap-3 sm:gap-4 md:gap-6 w-full max-w-md sm:max-w-lg">
-            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 md:gap-4 w-full">
+          <div className="flex flex-col items-center justify-center gap-4 md:gap-6 w-full max-w-md">
+            <div className="flex flex-col sm:flex-row items-center gap-3 md:gap-4 w-full">
               <button 
                 onClick={() => setShowSignInModal(true)}
-                className="w-full sm:w-auto rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 px-4 py-2.5 sm:px-6 sm:py-3 md:px-8 md:py-4 text-xs sm:text-sm md:text-base font-medium text-white transition-colors"
+                className="w-full sm:flex-1 rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 px-6 py-3 md:px-8 md:py-4 text-sm md:text-base font-medium text-white transition-colors"
               >
                 Sign In
               </button>
               <button 
                 onClick={() => setShowAccountModal(true)}
-                className="w-full sm:w-auto rounded-lg gradient-button px-4 py-2.5 sm:px-6 sm:py-3 md:px-8 md:py-4 text-xs sm:text-sm md:text-base font-medium text-white"
+                className="w-full sm:flex-1 rounded-lg gradient-button px-6 py-3 md:px-8 md:py-4 text-sm md:text-base font-medium text-white"
               >
                 Create Account
               </button>
             </div>
-            <Link href="/leaderboard" className="w-full sm:w-auto rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 px-4 py-2.5 sm:px-6 sm:py-3 md:px-8 md:py-4 text-xs sm:text-sm md:text-base font-medium text-white transition-colors text-center">
+            <Link href="/leaderboard" className="w-full rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 px-6 py-3 md:px-8 md:py-4 text-sm md:text-base font-medium text-white transition-colors text-center">
               <FontAwesomeIcon icon={faTrophy} /> View Leaderboard
             </Link>
           </div>

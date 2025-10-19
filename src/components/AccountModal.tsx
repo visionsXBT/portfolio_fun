@@ -19,6 +19,41 @@ export default function AccountModal({ isOpen, onClose, onSuccess, onSwitchToSig
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
   const [usernameDebounceTimer, setUsernameDebounceTimer] = useState<NodeJS.Timeout | null>(null);
 
+  // Handle paste events for copy/paste functionality
+  const handlePaste = async (e: React.ClipboardEvent, field: 'username' | 'password' | 'confirmPassword') => {
+    e.preventDefault();
+    try {
+      const pastedText = await navigator.clipboard.readText();
+      if (field === 'username') {
+        setUsername(pastedText);
+      } else if (field === 'password') {
+        setPassword(pastedText);
+      } else if (field === 'confirmPassword') {
+        setConfirmPassword(pastedText);
+      }
+    } catch (err) {
+      console.log('Paste failed:', err);
+      // Fallback: allow default paste behavior
+      const target = e.target as HTMLInputElement;
+      const start = target.selectionStart || 0;
+      const end = target.selectionEnd || 0;
+      let value = '';
+      if (field === 'username') value = username;
+      else if (field === 'password') value = password;
+      else if (field === 'confirmPassword') value = confirmPassword;
+      
+      const newValue = value.substring(0, start) + e.clipboardData.getData('text') + value.substring(end);
+      
+      if (field === 'username') {
+        setUsername(newValue);
+      } else if (field === 'password') {
+        setPassword(newValue);
+      } else if (field === 'confirmPassword') {
+        setConfirmPassword(newValue);
+      }
+    }
+  };
+
   // Function to check username availability
   const checkUsernameAvailability = useCallback(async (usernameToCheck: string) => {
     if (!usernameToCheck.trim() || usernameToCheck.length < 3) {
@@ -165,7 +200,7 @@ export default function AccountModal({ isOpen, onClose, onSuccess, onSwitchToSig
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" data-auth-modal>
       <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 p-6 w-full max-w-md">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-white">Create Account</h2>
@@ -185,6 +220,7 @@ export default function AccountModal({ isOpen, onClose, onSuccess, onSwitchToSig
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                onPaste={(e) => handlePaste(e, 'username')}
                 className={`w-full rounded-md border px-3 py-2 pr-10 text-sm outline-none focus:ring-2 ${
                   errors.username 
                     ? "border-red-400 focus:ring-red-400 bg-red-500/10" 
@@ -193,6 +229,7 @@ export default function AccountModal({ isOpen, onClose, onSuccess, onSwitchToSig
                     : "border-white/20 bg-white/5 text-white focus:ring-[var(--brand-end)]"
                 }`}
                 placeholder="Enter your username"
+                disabled={isLoading}
               />
               {/* Username status indicator */}
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -221,12 +258,14 @@ export default function AccountModal({ isOpen, onClose, onSuccess, onSwitchToSig
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onPaste={(e) => handlePaste(e, 'password')}
               className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 ${
                 errors.password 
                   ? "border-red-400 focus:ring-red-400 bg-red-500/10" 
                   : "border-white/20 bg-white/5 text-white focus:ring-[var(--brand-end)]"
               }`}
               placeholder="Enter your password"
+              disabled={isLoading}
             />
             {errors.password && (
               <p className="text-red-400 text-xs mt-1">{errors.password}</p>
@@ -239,12 +278,14 @@ export default function AccountModal({ isOpen, onClose, onSuccess, onSwitchToSig
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
+              onPaste={(e) => handlePaste(e, 'confirmPassword')}
               className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 ${
                 errors.confirmPassword 
                   ? "border-red-400 focus:ring-red-400 bg-red-500/10" 
                   : "border-white/20 bg-white/5 text-white focus:ring-[var(--brand-end)]"
               }`}
               placeholder="Confirm your password"
+              disabled={isLoading}
             />
             {errors.confirmPassword && (
               <p className="text-red-400 text-xs mt-1">{errors.confirmPassword}</p>
