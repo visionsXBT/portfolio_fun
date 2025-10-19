@@ -695,12 +695,6 @@ export default function PublicPortfolioView() {
         {portfolios.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-white/60 text-lg mb-4">No portfolios to display</div>
-            <Link 
-              href="/user" 
-              className="inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/5 text-white px-4 py-2 text-sm hover:bg-white/10 transition-colors"
-            >
-              Open portfolio builder
-            </Link>
           </div>
         ) : (
           portfolios.map((portfolio, portfolioIndex) => {
@@ -808,13 +802,7 @@ export default function PublicPortfolioView() {
 
         {/* Footer */}
         <div className="text-center mt-8">
-          <Link 
-            href="/user" 
-            className="inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/5 text-white px-4 py-2 text-sm hover:bg-white/10 transition-colors"
-          >
-            Open portfolio builder
-          </Link>
-          <div className="text-white/60 text-sm mt-4">
+          <div className="text-white/60 text-sm">
             Portfolio shared via <span className="text-white font-semibold">onPort</span>
           </div>
         </div>

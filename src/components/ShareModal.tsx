@@ -119,11 +119,11 @@ export default function ShareModal({ isOpen, onClose, portfolio, portfolioStats,
             {/* Main Content - Moved to Bottom */}
             <div className="flex flex-col">
               {/* Token Pictures - Top */}
-              <div className="flex gap-2 sm:gap-4 mb-4">
+              <div className="flex gap-1 sm:gap-4 mb-4">
                 {portfolio.rows.slice(0, 4).map((row) => {
                   const meta = tokenMeta[row.mint] || extraMeta[row.mint];
                   return (
-                    <div key={row.mint} className="w-16 h-16 sm:w-32 sm:h-32 overflow-hidden rounded-lg border border-white/20">
+                    <div key={row.mint} className="w-12 h-12 sm:w-32 sm:h-32 overflow-hidden rounded-lg border border-white/20">
                       <Image 
                         src={meta?.logoURI || '/placeholder-token.svg'} 
                         alt={meta?.symbol || 'Token'} 
@@ -135,7 +135,7 @@ export default function ShareModal({ isOpen, onClose, portfolio, portfolioStats,
                   );
                 })}
                 {portfolio.rows.length > 4 && (
-                  <div className="w-16 h-16 sm:w-32 sm:h-32 bg-white/20 flex items-center justify-center text-white text-xs sm:text-sm font-bold">
+                  <div className="w-12 h-12 sm:w-32 sm:h-32 bg-white/20 flex items-center justify-center text-white text-xs sm:text-sm font-bold">
                     +{portfolio.rows.length - 4}
                   </div>
                 )}
