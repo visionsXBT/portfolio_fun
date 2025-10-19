@@ -56,7 +56,7 @@ export default function NavigationBar({ username, profilePicture, isCurrentUser 
 
   return (
     <>
-      {/* Mobile Menu Button */}
+      {/* Mobile Menu Button - Always Visible */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="lg:hidden fixed top-4 left-4 z-50 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-2 text-white"
@@ -72,7 +72,7 @@ export default function NavigationBar({ username, profilePicture, isCurrentUser 
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 lg:static lg:h-auto lg:w-auto lg:bg-transparent lg:backdrop-blur-none lg:border-r-0
       `}>
-        <div className="flex flex-col h-screen p-4 pb-16" style={{ fontFamily: 'Golos Text, sans-serif' }}>
+        <div className="flex flex-col h-screen p-4 pb-16 pt-16 lg:pt-4" style={{ fontFamily: 'Golos Text, sans-serif' }}>
           {/* Logo Section */}
           <div className="flex flex-col items-center gap-2 mb-6">
             <Link href="/" className="w-40 h-20 hover:opacity-80 transition-opacity">
