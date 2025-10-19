@@ -58,7 +58,7 @@ export default function Home() {
               alt="Shill your bags in a fun way. No matter the chain."
               width={1200}
               height={600}
-              className="max-w-full h-auto w-full max-w-4xl ml-24"
+              className="max-w-full h-auto w-full max-w-4xl"
               priority
             />
           </div>

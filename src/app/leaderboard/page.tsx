@@ -8,6 +8,7 @@ import JumpingDots from '@/components/JumpingDots';
 import { PublicKey } from '@solana/web3.js';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartBar, faCrown, faHouse } from '@fortawesome/free-solid-svg-icons';
+import Image from 'next/image';
 
 interface PortfolioStats {
   id: string;
@@ -448,9 +449,11 @@ export default function LeaderboardPage() {
                   className="gradient-button px-4 py-2 text-sm text-white rounded-md flex items-center gap-2"
                 >
                   {userAccount.profilePicture ? (
-                    <img
+                    <Image
                       src={userAccount.profilePicture}
                       alt="Profile"
+                      width={24}
+                      height={24}
                       className="w-6 h-6 rounded-full object-cover"
                     />
                   ) : (
@@ -549,9 +552,11 @@ export default function LeaderboardPage() {
                           className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden hover:opacity-80 transition-opacity cursor-pointer"
                         >
                           {portfolio.profilePicture ? (
-                            <img
+                            <Image
                               src={portfolio.profilePicture}
                               alt={portfolio.username}
+                              width={40}
+                              height={40}
                               className="w-full h-full object-cover"
                             />
                           ) : (

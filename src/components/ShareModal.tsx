@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import ShareImageGenerator from './ShareImageGenerator';
 
 interface Portfolio {
@@ -100,9 +101,11 @@ export default function ShareModal({ isOpen, onClose, portfolio, portfolioStats,
         {/* Share Card */}
         <div className="relative w-full max-w-[800px]" style={{ fontFamily: 'Golos Text, sans-serif' }}>
           {/* Base sharing.png image - responsive */}
-          <img 
+          <Image 
             src="/sharing.png" 
             alt="Share Card" 
+            width={800}
+            height={450}
             className="w-full h-auto max-w-[800px] max-h-[450px] shadow-2xl object-cover select-none" 
             draggable={false}
             onContextMenu={(e) => {
@@ -121,9 +124,11 @@ export default function ShareModal({ isOpen, onClose, portfolio, portfolioStats,
                   const meta = tokenMeta[row.mint] || extraMeta[row.mint];
                   return (
                     <div key={row.mint} className="w-16 h-16 sm:w-32 sm:h-32 overflow-hidden">
-                      <img 
+                      <Image 
                         src={meta?.logoURI || '/placeholder-token.svg'} 
                         alt={meta?.symbol || 'Token'} 
+                        width={128}
+                        height={128}
                         className="w-full h-full object-cover"
                       />
                     </div>
@@ -165,10 +170,10 @@ export default function ShareModal({ isOpen, onClose, portfolio, portfolioStats,
                   <span className="text-white/90 text-sm sm:text-base">Chain</span>
                   <div className="flex gap-2 sm:gap-3">
                     {chains.includes('solana') && (
-                      <img src="/sol-logo.png" alt="Solana" className="w-5 h-5 sm:w-6 sm:h-6" />
+                      <Image src="/sol-logo.png" alt="Solana" width={24} height={24} className="w-5 h-5 sm:w-6 sm:h-6" />
                     )}
                     {chains.includes('bnb') && (
-                      <img src="/bnb logo.png" alt="BNB" className="w-5 h-5 sm:w-6 sm:h-6" />
+                      <Image src="/bnb logo.png" alt="BNB" width={24} height={24} className="w-5 h-5 sm:w-6 sm:h-6" />
                     )}
                   </div>
                 </div>
@@ -192,7 +197,7 @@ export default function ShareModal({ isOpen, onClose, portfolio, portfolioStats,
             }}
             className="flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 text-white px-4 py-2 text-xs hover:bg-white/10 transition-colors"
           >
-            <img src="/share-icon.png" alt="Share" className="w-4 h-4" />
+            <Image src="/share-icon.png" alt="Share" width={16} height={16} className="w-4 h-4" />
             <span>{copied ? 'Copied!' : 'Share'}</span>
           </button>
         </div>

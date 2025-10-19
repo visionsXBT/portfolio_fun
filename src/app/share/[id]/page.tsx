@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { PublicKey } from '@solana/web3.js';
 import Logo from '@/components/Logo';
 import TokenImage from '@/components/TokenImage';
+import Image from 'next/image';
+import SignInModal from '@/components/SignInModal';
+import AccountModal from '@/components/AccountModal';
 
 interface PortfolioRow {
   mint: string;
@@ -54,6 +57,14 @@ export default function PublicPortfolioView() {
   const [extraMeta, setExtraMeta] = useState<Record<string, TokenMeta>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentUserSession, setCurrentUserSession] = useState<{ 
+    username: string; 
+    userId: string; 
+    sessionToken: string; 
+    profilePicture?: string 
+  } | null>(null);
+  const [showSignInModal, setShowSignInModal] = useState(false);
+  const [showAccountModal, setShowAccountModal] = useState(false);
 
   // Dedicated function for pump.fun image fetching (copied from main page)
   const fetchPumpFunImages = useCallback(async (mint: string): Promise<string | null> => {
@@ -335,6 +346,33 @@ export default function PublicPortfolioView() {
     return null;
   }, [scrapeFourMemeImage]);
 
+  // Load user session
+  useEffect(() => {
+    const loadUserSession = async () => {
+      try {
+        const sessionResponse = await fetch('/api/session');
+        if (sessionResponse.ok) {
+          const sessionData = await sessionResponse.json();
+          if (sessionData.success) {
+            console.log('👤 Found user session on share page:', sessionData.user);
+            setCurrentUserSession(sessionData.user);
+          } else {
+            console.log('👤 No valid session found on share page');
+            setCurrentUserSession(null);
+          }
+        } else {
+          console.log('👤 No session found on share page');
+          setCurrentUserSession(null);
+        }
+      } catch (error) {
+        console.error('Failed to load user session on share page:', error);
+        setCurrentUserSession(null);
+      }
+    };
+    
+    loadUserSession();
+  }, []);
+
   useEffect(() => {
     if (!portfolioId) return;
 
@@ -572,7 +610,43 @@ export default function PublicPortfolioView() {
                   </svg>
                 </button>
               </div>
-              <Link href="/user" className="text-sm text-white/60 hover:text-white">← Builder</Link>
+              {currentUserSession ? (
+                <button 
+                  onClick={() => window.location.href = '/profile'}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 text-white text-sm transition-colors"
+                >
+                  {currentUserSession.profilePicture ? (
+                    <Image
+                      src={currentUserSession.profilePicture}
+                      alt="Profile"
+                      width={20}
+                      height={20}
+                      className="w-5 h-5 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full bg-gradient-to-r from-[var(--brand-start)] to-[var(--brand-end)] flex items-center justify-center text-white font-bold text-xs">
+                      {currentUserSession.username.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span>{currentUserSession.username}</span>
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowSignInModal(true)}
+                    className="text-sm text-white/60 hover:text-white transition-colors"
+                  >
+                    Sign In
+                  </button>
+                  <span className="text-white/40">•</span>
+                  <button
+                    onClick={() => setShowAccountModal(true)}
+                    className="text-sm text-white/60 hover:text-white transition-colors"
+                  >
+                    Sign Up
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           
@@ -580,9 +654,11 @@ export default function PublicPortfolioView() {
           <div className="flex items-center gap-4 mb-2">
             {portfolios.length > 0 && portfolios[0].profilePicture && (
               <div className="w-12 h-12 rounded-full overflow-hidden">
-                <img
+                <Image
                   src={portfolios[0].profilePicture}
                   alt={portfolios[0].username || 'User'}
+                  width={48}
+                  height={48}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -714,6 +790,41 @@ export default function PublicPortfolioView() {
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      {showSignInModal && (
+        <SignInModal
+          isOpen={showSignInModal}
+          onClose={() => setShowSignInModal(false)}
+          onSuccess={(username, userId) => {
+            setShowSignInModal(false);
+            // Session is now handled by HTTP-only cookies
+            // Redirect to user's profile page after successful sign in
+            window.location.href = `/${username}`;
+          }}
+          onSwitchToSignUp={() => {
+            setShowSignInModal(false);
+            setShowAccountModal(true);
+          }}
+        />
+      )}
+
+      {showAccountModal && (
+        <AccountModal
+          isOpen={showAccountModal}
+          onClose={() => setShowAccountModal(false)}
+          onSuccess={(username, userId) => {
+            setShowAccountModal(false);
+            // Session is now handled by HTTP-only cookies
+            // Redirect to user's profile page after successful account creation
+            window.location.href = `/${username}`;
+          }}
+          onSwitchToSignIn={() => {
+            setShowAccountModal(false);
+            setShowSignInModal(true);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from 'react';
+import Image from 'next/image';
 
 interface ProfilePictureUploadProps {
   currentImage?: string | null;
@@ -82,9 +83,11 @@ export default function ProfilePictureUpload({ currentImage, onImageChange, user
   return (
     <div className="relative w-16 h-16 rounded-full overflow-hidden group cursor-pointer" onClick={handleClick}>
       {previewUrl ? (
-        <img
+        <Image
           src={previewUrl}
           alt="Profile"
+          width={64}
+          height={64}
           className="w-full h-full object-cover rounded-full"
         />
       ) : (
