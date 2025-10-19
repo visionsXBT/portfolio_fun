@@ -19,40 +19,17 @@ export default function AccountModal({ isOpen, onClose, onSuccess, onSwitchToSig
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
   const [usernameDebounceTimer, setUsernameDebounceTimer] = useState<NodeJS.Timeout | null>(null);
 
-  // Handle paste events for copy/paste functionality
-  const handlePaste = async (e: React.ClipboardEvent, field: 'username' | 'password' | 'confirmPassword') => {
-    e.preventDefault();
-    try {
-      const pastedText = await navigator.clipboard.readText();
-      if (field === 'username') {
-        setUsername(pastedText);
-      } else if (field === 'password') {
-        setPassword(pastedText);
-      } else if (field === 'confirmPassword') {
-        setConfirmPassword(pastedText);
-      }
-    } catch (err) {
-      console.log('Paste failed:', err);
-      // Fallback: allow default paste behavior
+  // Handle keyboard shortcuts
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Allow Ctrl+A (or Cmd+A on Mac) to select all
+    if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+      e.preventDefault();
       const target = e.target as HTMLInputElement;
-      const start = target.selectionStart || 0;
-      const end = target.selectionEnd || 0;
-      let value = '';
-      if (field === 'username') value = username;
-      else if (field === 'password') value = password;
-      else if (field === 'confirmPassword') value = confirmPassword;
-      
-      const newValue = value.substring(0, start) + e.clipboardData.getData('text') + value.substring(end);
-      
-      if (field === 'username') {
-        setUsername(newValue);
-      } else if (field === 'password') {
-        setPassword(newValue);
-      } else if (field === 'confirmPassword') {
-        setConfirmPassword(newValue);
-      }
+      target.select();
     }
   };
+
+
 
   // Function to check username availability
   const checkUsernameAvailability = useCallback(async (usernameToCheck: string) => {
@@ -220,7 +197,7 @@ export default function AccountModal({ isOpen, onClose, onSuccess, onSwitchToSig
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                onPaste={(e) => handlePaste(e, 'username')}
+                onKeyDown={handleKeyDown}
                 className={`w-full rounded-md border px-3 py-2 pr-10 text-sm outline-none focus:ring-2 ${
                   errors.username 
                     ? "border-red-400 focus:ring-red-400 bg-red-500/10" 
@@ -258,7 +235,7 @@ export default function AccountModal({ isOpen, onClose, onSuccess, onSwitchToSig
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              onPaste={(e) => handlePaste(e, 'password')}
+              onKeyDown={handleKeyDown}
               className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 ${
                 errors.password 
                   ? "border-red-400 focus:ring-red-400 bg-red-500/10" 
@@ -278,7 +255,7 @@ export default function AccountModal({ isOpen, onClose, onSuccess, onSwitchToSig
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              onPaste={(e) => handlePaste(e, 'confirmPassword')}
+              onKeyDown={handleKeyDown}
               className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 ${
                 errors.confirmPassword 
                   ? "border-red-400 focus:ring-red-400 bg-red-500/10" 

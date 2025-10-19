@@ -16,32 +16,17 @@ export default function SignInModal({ isOpen, onClose, onSuccess, onSwitchToSign
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Handle paste events for copy/paste functionality
-  const handlePaste = async (e: React.ClipboardEvent, field: 'username' | 'password') => {
-    e.preventDefault();
-    try {
-      const pastedText = await navigator.clipboard.readText();
-      if (field === 'username') {
-        setUsername(pastedText);
-      } else if (field === 'password') {
-        setPassword(pastedText);
-      }
-    } catch (err) {
-      console.log('Paste failed:', err);
-      // Fallback: allow default paste behavior
+  // Handle keyboard shortcuts
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Allow Ctrl+A (or Cmd+A on Mac) to select all
+    if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+      e.preventDefault();
       const target = e.target as HTMLInputElement;
-      const start = target.selectionStart || 0;
-      const end = target.selectionEnd || 0;
-      const value = field === 'username' ? username : password;
-      const newValue = value.substring(0, start) + e.clipboardData.getData('text') + value.substring(end);
-      
-      if (field === 'username') {
-        setUsername(newValue);
-      } else if (field === 'password') {
-        setPassword(newValue);
-      }
+      target.select();
     }
   };
+
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,7 +91,7 @@ export default function SignInModal({ isOpen, onClose, onSuccess, onSwitchToSign
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              onPaste={(e) => handlePaste(e, 'username')}
+              onKeyDown={handleKeyDown}
               className="w-full rounded-md border border-white/20 bg-white/5 text-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
               placeholder="Enter your username"
               disabled={isLoading}
@@ -119,7 +104,7 @@ export default function SignInModal({ isOpen, onClose, onSuccess, onSwitchToSign
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              onPaste={(e) => handlePaste(e, 'password')}
+              onKeyDown={handleKeyDown}
               className="w-full rounded-md border border-white/20 bg-white/5 text-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
               placeholder="Enter your password"
               disabled={isLoading}

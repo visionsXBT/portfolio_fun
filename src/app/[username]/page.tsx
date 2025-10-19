@@ -137,6 +137,23 @@ export default function UsernamePage() {
     }
   }, []);
 
+  // Handle keyboard shortcuts for token input
+  const handleTokenInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Allow Ctrl+A (or Cmd+A on Mac) to select all
+    if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+      e.preventDefault();
+      const target = e.target as HTMLInputElement;
+      target.select();
+    }
+    // Handle Enter key to add token
+    else if (e.key === "Enter") {
+      const portfolioId = e.currentTarget.getAttribute('data-portfolio-id');
+      if (portfolioId) {
+        handleAddToken(portfolioId);
+      }
+    }
+  };
+
   // Handle portfolio deletion
   const handleDeletePortfolio = useCallback(async (portfolioId: string) => {
     if (!currentUserSession || currentUserSession.username !== username) return;
@@ -1082,11 +1099,10 @@ export default function UsernamePage() {
                           type="text"
                           value={portfolioInputs[portfolio.id] || ""}
                           onChange={(e) => setPortfolioInputs(prev => ({ ...prev, [portfolio.id]: e.target.value }))}
+                          onKeyDown={handleTokenInputKeyDown}
+                          data-portfolio-id={portfolio.id}
                           placeholder="Paste Solana or BNB token contract address..."
                           className="flex-1 rounded-md border border-white/20 bg-white/5 text-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleAddToken(portfolio.id);
-                          }}
                         />
                         <button
                           onClick={() => handleAddToken(portfolio.id)}

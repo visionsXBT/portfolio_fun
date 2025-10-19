@@ -35,6 +35,7 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
 
+
   // Check user session
   useEffect(() => {
     const checkSession = async () => {
