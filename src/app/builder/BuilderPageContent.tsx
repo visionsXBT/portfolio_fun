@@ -1935,29 +1935,6 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
                   {/* Portfolio Content */}
                   {portfolio.isExpanded && (
                     <div className="space-y-4">
-                      {/* Add Token Input */}
-                      {!isSharedPortfolio && (
-                        <div className="flex gap-3">
-                          <input
-                            type="text"
-                            value={portfolioInputs[portfolio.id] || ""}
-                            onChange={(e) => setPortfolioInputs(prev => ({ ...prev, [portfolio.id]: e.target.value }))}
-                            placeholder="Paste Solana or BNB token contract address..."
-                            className="flex-1 rounded-md border border-white/20 bg-white/5 text-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") addRow(portfolio.id);
-                            }}
-                          />
-                          <button
-                            onClick={() => addRow(portfolio.id)}
-                            disabled={!extractMintFromInput(portfolioInputs[portfolio.id] || "")}
-                            className="rounded-md gradient-button px-4 py-2 text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            Add Token
-                          </button>
-                        </div>
-                      )}
-
                       {/* Token List */}
                       {portfolio.rows.length > 0 && (
                         <div className="space-y-2">
@@ -2011,6 +1988,29 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
                               </div>
                             );
                           })}
+                        </div>
+                      )}
+
+                      {/* Add Token Input */}
+                      {!isSharedPortfolio && (
+                        <div className="flex gap-3">
+                          <input
+                            type="text"
+                            value={portfolioInputs[portfolio.id] || ""}
+                            onChange={(e) => setPortfolioInputs(prev => ({ ...prev, [portfolio.id]: e.target.value }))}
+                            placeholder="Paste Solana or BNB token contract address..."
+                            className="flex-1 rounded-md border border-white/20 bg-white/5 text-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") addRow(portfolio.id);
+                            }}
+                          />
+                          <button
+                            onClick={() => addRow(portfolio.id)}
+                            disabled={!extractMintFromInput(portfolioInputs[portfolio.id] || "")}
+                            className="rounded-md gradient-button px-4 py-2 text-sm text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Add Token
+                          </button>
                         </div>
                       )}
                     </div>
