@@ -827,110 +827,6 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
   }, []);
 
   // Function to fetch BNB token images
-  // Function to fetch Four.meme market data
-  const fetchFourMemeData = useCallback(async (address: string): Promise<{ marketCap?: number; priceChange24h?: number; price?: number } | null> => {
-    // Skip during build time to prevent build errors
-    if (typeof window === 'undefined') {
-      return null;
-    }
-    
-    console.log('🔍 Fetching Four.meme data for address:', address);
-    
-    try {
-      const query = `
-        query {
-          Trading {
-            Pairs(
-              where: {
-                Interval: {Time: {Duration: {eq: 1}}}, 
-                Price: {IsQuotedInUsd: true}, 
-                Market: {Protocol: {is: "fourmeme_v1"}, Network: {is: "Binance Smart Chain"}}, 
-                Volume: {Usd: {gt: 5}},
-                Token: {Address: {is: "${address}"}}
-              }
-            ) {
-              Token {
-                Name
-                Symbol
-                Address
-              }
-              Market {
-                Protocol
-                Program
-                Network
-                Name
-                Address
-              }
-              Block {
-                Date
-                Time
-                Timestamp
-              }
-              Interval {
-                Time {
-                  Start
-                  Duration
-                  End
-                }
-              }
-              Volume {
-                Base
-                Quote
-                Usd
-              }
-              marketcap: calculate(expression: "Price_Average_Mean * 1000000000")
-              Price {
-                Average {
-                  Mean
-                }
-                Ohlc {
-                  Close
-                  High
-                  Low
-                  Open
-                }
-              }
-            }
-          }
-        }
-      `;
-
-      const response = await fetch('/api/fourmeme-proxy', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ query }),
-        signal: AbortSignal.timeout(10000)
-      });
-
-      if (!response.ok) {
-        console.log('❌ Four.meme API request failed:', response.status, response.statusText);
-        return null;
-      }
-
-      const data = await response.json();
-      console.log('📊 Four.meme response data:', JSON.stringify(data, null, 2));
-
-      if (data.data?.Trading?.Pairs && data.data.Trading.Pairs.length > 0) {
-        const pair = data.data.Trading.Pairs[0];
-        const result = {
-          marketCap: pair.marketcap,
-          price: pair.Price?.Average?.Mean,
-          priceChange24h: undefined // Four.meme doesn't provide 24h change in this query
-        };
-        
-        console.log('✅ Found Four.meme data:', result);
-        return result;
-      } else {
-        console.log('❌ No Four.meme data found for address:', address);
-        return null;
-      }
-    } catch (error) {
-      console.log('❌ Four.meme data fetch failed:', (error as Error).message);
-      return null;
-    }
-  }, []);
 
   // Function to scrape Four.meme page and extract image UUID
   const scrapeFourMemeImage = useCallback(async (contractAddress: string): Promise<string | null> => {
@@ -1235,16 +1131,8 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
         console.log('🖼️ Fetching BNB token image...');
         logoURI = await fetchBNBTokenImage(mint);
         
-        // Only try Four.meme if we don't already have price data from DexScreener/CoinGecko
-        if (!fourMemeData) {
-          console.log('💰 Fetching Four.meme market data...');
-          const fourMemeResult = await fetchFourMemeData(mint);
-          if (fourMemeResult) {
-            fourMemeData = fourMemeResult;
-          }
-        } else {
-          console.log('💰 Using DexScreener/CoinGecko price data (skipping Four.meme)');
-        }
+        // Use DexScreener/CoinGecko price data only
+        console.log('💰 Using DexScreener/CoinGecko price data');
       }
       
       console.log('🖼️ Image result:', logoURI);
