@@ -663,24 +663,43 @@ export default function UsernamePage() {
     // Fetch individual token images and fourmeme data
     const fetchIndividualImages = async () => {
       for (const mint of uniqueMints) {
-        // Fetch image if not already available
-        if (!extraMeta[mint]?.logoURI && !tokenMeta[mint]?.logoURI) {
-          try {
-            const imageUrl = await fetchPumpFunImages(mint);
-            if (imageUrl) {
-              setExtraMeta(prev => ({
-                ...prev,
-                [mint]: {
-                  ...prev[mint],
-                  logoURI: imageUrl
-                }
-              }));
+        // Fetch metadata based on token type
+        if (isBSCToken(mint)) {
+          // For BSC tokens, fetch complete data from DexScreener
+          if (!extraMeta[mint]?.name && !tokenMeta[mint]?.name) {
+            try {
+              console.log('🔍 BSC token detected in useEffect, fetching data from DexScreener...');
+              const bscData = await fetchBSCTokenData(mint);
+              if (bscData) {
+                setExtraMeta(prev => ({
+                  ...prev,
+                  [mint]: bscData
+                }));
+              }
+            } catch (error) {
+              console.warn('❌ Failed to fetch BSC token data:', mint, error);
             }
-          } catch (error) {
-            console.warn('❌ Failed to fetch image for token:', mint, error);
+          }
+        } else if (isSolanaPumpToken(mint)) {
+          // For Solana pump tokens, fetch image only
+          if (!extraMeta[mint]?.logoURI && !tokenMeta[mint]?.logoURI) {
+            try {
+              console.log('🔍 Solana pump token detected in useEffect, fetching image...');
+              const imageUrl = await fetchPumpFunImages(mint);
+              if (imageUrl) {
+                setExtraMeta(prev => ({
+                  ...prev,
+                  [mint]: {
+                    ...prev[mint],
+                    logoURI: imageUrl
+                  }
+                }));
+              }
+            } catch (error) {
+              console.warn('❌ Failed to fetch Solana token image:', mint, error);
+            }
           }
         }
-
       }
     };
 
@@ -689,7 +708,7 @@ export default function UsernamePage() {
     return () => {
       controller.abort();
     };
-  }, [userData?.portfolios, tokenMeta, extraMeta, fetchPumpFunImages, priceChanges24h, marketCaps]);
+  }, [userData?.portfolios, tokenMeta, extraMeta, fetchPumpFunImages, fetchBSCTokenData, priceChanges24h, marketCaps]);
 
   // Calculate portfolio stats
   const portfolioStats = useMemo(() => {
