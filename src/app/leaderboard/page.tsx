@@ -43,6 +43,7 @@ export default function LeaderboardPage() {
     minutes: 0,
     seconds: 0
   });
+  const [resetTime, setResetTime] = useState<string>('');
   const [tokenMeta, setTokenMeta] = useState<Record<string, { symbol?: string; name?: string; logoURI?: string | null }>>({});
   const [tabChangeKey, setTabChangeKey] = useState(0);
   const [userAccount, setUserAccount] = useState<{ 
@@ -376,12 +377,30 @@ export default function LeaderboardPage() {
   useEffect(() => {
     const calculateTimeLeft = () => {
       const now = new Date();
-      const nextMonday = new Date();
       
-      // Get next Monday at 00:00:00
-      const daysUntilMonday = (8 - now.getDay()) % 7;
-      nextMonday.setDate(now.getDate() + (daysUntilMonday === 0 ? 7 : daysUntilMonday));
-      nextMonday.setHours(0, 0, 0, 0);
+      // Get next Monday at 00:00:00 UTC
+      const currentUTCYear = now.getUTCFullYear();
+      const currentUTCMonth = now.getUTCMonth();
+      const currentUTCDate = now.getUTCDate();
+      const currentUTCDay = now.getUTCDay(); // 0 for Sunday, 1 for Monday, etc.
+
+      let daysToAdd = (1 - currentUTCDay + 7) % 7; // Days until the *next* Monday (1 is Monday)
+      if (daysToAdd === 0) { // If today is Monday, we want next Monday
+        daysToAdd = 7;
+      }
+      const nextMonday = new Date(Date.UTC(currentUTCYear, currentUTCMonth, currentUTCDate + daysToAdd, 0, 0, 0, 0));
+      
+      // Set the reset time string (only once)
+      if (!resetTime) {
+        const resetTimeString = nextMonday.toLocaleString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          timeZone: 'UTC'
+        }) + ' at Midnight UTC';
+        setResetTime(resetTimeString);
+      }
       
       const difference = nextMonday.getTime() - now.getTime();
       
@@ -392,6 +411,11 @@ export default function LeaderboardPage() {
           minutes: Math.floor((difference / 1000 / 60) % 60),
           seconds: Math.floor((difference / 1000) % 60)
         });
+      } else {
+        // If the countdown has passed, recalculate for the next period
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        // Force a re-render to get the next Monday
+        setResetTime(''); // Clear resetTime to trigger recalculation
       }
     };
 
@@ -399,7 +423,7 @@ export default function LeaderboardPage() {
     const timer = setInterval(calculateTimeLeft, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [resetTime]);
 
   const formatMarketCap = (marketCap: number): string => {
     if (marketCap >= 1e9) {
@@ -505,6 +529,11 @@ export default function LeaderboardPage() {
             <p className="text-white/80 text-xs sm:text-sm mt-4">
               Winner gets 20% of pump.fun weekly rewards pool
             </p>
+            {resetTime && (
+              <p className="text-white/60 text-xs mt-2">
+                Resets: {resetTime}
+              </p>
+            )}
           </div>
         </div>
 
