@@ -1951,7 +1951,6 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
                       {/* Add Token Input - MOVED TO TOP */}
                       {!isSharedPortfolio && (
                         <div className="flex gap-3">
-                          {console.log('🎯 RENDERING INPUT FORM FIRST')}
                           <input
                             type="text"
                             value={portfolioInputs[portfolio.id] || ""}
@@ -1977,7 +1976,6 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
                         <div className="space-y-2">
                          
                           {portfolio.rows.map((row, index) => {
-                            console.log('🎯 Rendering token at index:', index, 'mint:', row.mint);
                             const meta = extraMeta[row.mint] || tokenMeta[row.mint];
                             const change24h = meta?.priceChange24h || priceChanges24h[row.mint];
                             const marketCap = meta?.marketCap || marketCaps[row.mint];
