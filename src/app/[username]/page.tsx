@@ -51,6 +51,17 @@ function extractMintFromInput(raw: string): string | null {
   return null;
 }
 
+// New token type detection functions
+function isBSCToken(address: string): boolean {
+  const lowerAddress = address.toLowerCase();
+  return isValidBNBAddress(address) && 
+         (lowerAddress.startsWith('0x4444') || lowerAddress.endsWith('4444'));
+}
+
+function isSolanaPumpToken(address: string): boolean {
+  return isValidMint(address) && address.toLowerCase().endsWith('pump');
+}
+
 interface PortfolioRow {
   mint: string;
 }
@@ -234,51 +245,6 @@ export default function UsernamePage() {
     setEditingPortfolioName('');
   };
 
-  // Handle adding tokens to portfolios (same logic as builder page)
-  const handleAddToken = useCallback(async (portfolioId: string) => {
-    const inputValue = portfolioInputs[portfolioId] || "";
-    const mint = extractMintFromInput(inputValue);
-    if (!mint || !currentUserSession) return;
-
-    console.log('➕ Adding token with mint:', mint);
-
-    // Check if token already exists in this portfolio
-    const portfolio = userData?.portfolios.find(p => p.id === portfolioId);
-    if (portfolio && portfolio.rows.some(row => row.mint === mint)) {
-      alert("This token has been added to this portfolio already.");
-      return;
-    }
-
-    // Add the token immediately
-    const updatedPortfolios = userData?.portfolios.map(p =>
-      p.id === portfolioId
-        ? { ...p, rows: [...p.rows, { mint }] }
-        : p
-    ) || [];
-
-    // Update local state
-    if (userData) {
-      setUserData({ ...userData, portfolios: updatedPortfolios });
-    }
-
-    // Clear input
-    setPortfolioInputs(prev => ({ ...prev, [portfolioId]: '' }));
-
-    // Save to database
-    try {
-      const response = await fetch(`/api/user/${currentUserSession.userId}/portfolios`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ portfolios: updatedPortfolios })
-      });
-
-      if (response.ok) {
-        console.log('✅ Token added to portfolio');
-      }
-    } catch (error) {
-      console.error('Failed to add token:', error);
-    }
-  }, [portfolioInputs, currentUserSession, userData]);
 
   // Handle removing tokens from portfolios (same logic as builder page)
   const handleRemoveToken = useCallback(async (portfolioId: string, mint: string) => {
@@ -312,93 +278,14 @@ export default function UsernamePage() {
     }
   }, [currentUserSession, userData]);
 
-  // Function to fetch Four.meme market data
-  const fetchFourMemeData = useCallback(async (address: string): Promise<{ marketCap?: number; priceChange24h?: number; price?: number } | null> => {
-    // Skip during build time to prevent build errors
-    if (typeof window === 'undefined') {
-      return null;
-    }
-    
-    console.log('🔍 Fetching Four.meme data for address:', address);
-    
-    try {
-      const query = `
-        query {
-          Trading {
-            Pairs(
-              where: {
-                Interval: {Time: {Duration: {eq: 1}}}, 
-                Price: {IsQuotedInUsd: true}, 
-                Market: {Protocol: {is: "fourmeme_v1"}, Network: {is: "Binance Smart Chain"}}, 
-                Volume: {Usd: {gt: 5}},
-                Token: {Address: {is: "${address}"}}
-              }
-            ) {
-              Token {
-                Name
-                Symbol
-                Address
-              }
-              Market {
-                Protocol
-                Network
-              }
-              Price {
-                Last
-                Change24h
-              }
-              Volume {
-                Usd
-              }
-              MarketCap {
-                Last
-              }
-            }
-          }
-        }
-      `;
-
-      const response = await fetch('/api/fourmeme-proxy', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ query }),
-        signal: AbortSignal.timeout(10000)
-      });
-
-      if (!response.ok) {
-        console.log('❌ Four.meme API request failed:', response.status, response.statusText);
-        return null;
-      }
-
-      const data = await response.json();
-      
-      if (data?.data?.Trading?.Pairs && data.data.Trading.Pairs.length > 0) {
-        const pair = data.data.Trading.Pairs[0];
-        const result = {
-          price: pair.Price?.Last ? parseFloat(pair.Price.Last) : undefined,
-          priceChange24h: pair.Price?.Change24h ? parseFloat(pair.Price.Change24h) : undefined,
-          marketCap: pair.MarketCap?.Last ? parseFloat(pair.MarketCap.Last) : undefined
-        };
-        console.log('✅ Four.meme data fetched:', result);
-        return result;
-      } else {
-        console.log('❌ No Four.meme data found for address:', address);
-        return null;
-      }
-    } catch (error) {
-      console.log('❌ Four.meme fetch error:', error);
-      return null;
-    }
-  }, []);
 
   // Fetch pump.fun images for tokens
   const fetchPumpFunImages = useCallback(async (mint: string): Promise<string | null> => {
     console.log('🔍 Trying image sources for Solana token:', mint);
     
-    // For pump tokens, try pump.fun first, then DexScreener for tokens without specific images
+    // For pump tokens, try pump.fun first, then IPFS, then DexScreener
     if (mint.toLowerCase().includes('pump')) {
+      // 1. Try pump.fun direct image
       const pumpUrl = `https://images.pump.fun/coin-image/${mint}?variant=600x600`;
       console.log('🔍 Testing pump.fun URL for pump token:', pumpUrl);
       
@@ -417,13 +304,30 @@ export default function UsernamePage() {
           console.log('✅ Found specific image from pump.fun URL:', pumpUrl);
           return pumpUrl;
         } else {
-          console.log('❌ No specific pump.fun image found, trying DexScreener');
+          console.log('❌ No specific pump.fun image found, trying IPFS');
         }
       } catch (error) {
-        console.log('❌ Pump.fun URL failed, trying DexScreener:', (error as Error).message);
+        console.log('❌ Pump.fun URL failed, trying IPFS:', (error as Error).message);
       }
       
-      // Fall back to DexScreener for pump tokens without specific images
+      // 2. Try IPFS scraping for pump tokens
+      try {
+        console.log('🔍 Trying IPFS scraping for pump token...');
+        const ipfsUrl = `https://ipfs.io/ipfs/${mint}`;
+        const response = await fetch(ipfsUrl, { 
+          method: 'HEAD',
+          signal: AbortSignal.timeout(3000)
+        });
+        
+        if (response.ok) {
+          console.log('✅ Found image from IPFS:', ipfsUrl);
+          return ipfsUrl;
+        }
+      } catch (error) {
+        console.log('❌ IPFS scraping failed:', (error as Error).message);
+      }
+      
+      // 3. Fall back to DexScreener for pump tokens without specific images
       console.log('🔍 Trying DexScreener for pump token without specific image');
       // Continue to DexScreener logic below
     }
@@ -468,6 +372,134 @@ export default function UsernamePage() {
     console.log('❌ No image found for token:', mint);
     return null;
   }, []);
+
+  // Fetch BSC token data from DexScreener
+  const fetchBSCTokenData = useCallback(async (address: string): Promise<{ name?: string; symbol?: string; logoURI?: string; price?: number; priceChange24h?: number; marketCap?: number } | null> => {
+    console.log('🔍 Fetching BSC token data from DexScreener for address:', address);
+    
+    try {
+      const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`, {
+        signal: AbortSignal.timeout(10000)
+      });
+
+      if (!response.ok) {
+        console.log('❌ DexScreener API request failed:', response.status, response.statusText);
+        return null;
+      }
+
+      const data = await response.json();
+      
+      if (!data || !data.pairs || data.pairs.length === 0) {
+        console.log('❌ No pairs found for BSC token:', address);
+        return null;
+      }
+
+      // Find the best pair (highest liquidity or most trades)
+      const bestPair = data.pairs[0];
+      const tokenInfo = bestPair.baseToken;
+
+      // Extract price data
+      const currentPrice = parseFloat(bestPair.priceUsd || '0');
+      const priceChange24h = parseFloat(bestPair.priceChange?.h24 || '0');
+      const marketCap = parseFloat(bestPair.fdv || '0');
+
+      // Get token image from DexScreener
+      const logoURI = `https://dd.dexscreener.com/ds-data/tokens/bsc/${address.toLowerCase()}.png?key=2d2e69`;
+
+      const result = {
+        name: tokenInfo?.name || 'Unknown Token',
+        symbol: tokenInfo?.symbol || 'UNKNOWN',
+        logoURI: logoURI,
+        price: currentPrice,
+        priceChange24h: priceChange24h,
+        marketCap: marketCap
+      };
+
+      console.log('✅ BSC token data fetched from DexScreener:', result);
+      return result;
+    } catch (error) {
+      console.log('❌ BSC token fetch error:', error);
+      return null;
+    }
+  }, []);
+
+  // Handle adding tokens to portfolios (same logic as builder page)
+  const handleAddToken = useCallback(async (portfolioId: string) => {
+    const inputValue = portfolioInputs[portfolioId] || "";
+    const mint = extractMintFromInput(inputValue);
+    if (!mint || !currentUserSession) return;
+
+    console.log('➕ Adding token with mint:', mint);
+
+    // Check if token already exists in this portfolio
+    const portfolio = userData?.portfolios.find(p => p.id === portfolioId);
+    if (portfolio && portfolio.rows.some(row => row.mint === mint)) {
+      alert("This token has been added to this portfolio already.");
+      return;
+    }
+
+    // Add the token immediately
+    const updatedPortfolios = userData?.portfolios.map(p =>
+      p.id === portfolioId
+        ? { ...p, rows: [...p.rows, { mint }] }
+        : p
+    ) || [];
+
+    // Update local state
+    if (userData) {
+      setUserData({ ...userData, portfolios: updatedPortfolios });
+    }
+
+    // Clear input
+    setPortfolioInputs(prev => ({ ...prev, [portfolioId]: '' }));
+
+    // Fetch token metadata based on token type
+    if (isBSCToken(mint)) {
+      console.log('🔍 BSC token detected, fetching data from DexScreener...');
+      try {
+        const bscData = await fetchBSCTokenData(mint);
+        if (bscData) {
+          setExtraMeta(prev => ({
+            ...prev,
+            [mint]: bscData
+          }));
+        }
+      } catch (error) {
+        console.warn('❌ Failed to fetch BSC token data:', error);
+      }
+    } else if (isSolanaPumpToken(mint)) {
+      console.log('🔍 Solana pump token detected, fetching image...');
+      try {
+        const imageUrl = await fetchPumpFunImages(mint);
+        if (imageUrl) {
+          setExtraMeta(prev => ({
+            ...prev,
+            [mint]: {
+              ...prev[mint],
+              logoURI: imageUrl
+            }
+          }));
+        }
+      } catch (error) {
+        console.warn('❌ Failed to fetch Solana token image:', error);
+      }
+    }
+
+    // Save to database
+    try {
+      const response = await fetch(`/api/user/${currentUserSession.userId}/portfolios`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ portfolios: updatedPortfolios })
+      });
+
+      if (response.ok) {
+        console.log('✅ Token added to portfolio');
+      }
+    } catch (error) {
+      console.error('Failed to add token:', error);
+    }
+  }, [portfolioInputs, currentUserSession, userData, fetchBSCTokenData, fetchPumpFunImages]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -649,27 +681,6 @@ export default function UsernamePage() {
           }
         }
 
-        // Fetch fourmeme data for BNB tokens if no price data available
-        if (isValidBNBAddress(mint) && !priceChanges24h[mint] && !marketCaps[mint]) {
-          try {
-            console.log('💰 Fetching Four.meme market data for BNB token:', mint);
-            const fourMemeResult = await fetchFourMemeData(mint);
-            if (fourMemeResult) {
-              setExtraMeta(prev => ({
-                ...prev,
-                [mint]: {
-                  ...prev[mint],
-                  price: fourMemeResult.price,
-                  priceChange24h: fourMemeResult.priceChange24h,
-                  marketCap: fourMemeResult.marketCap
-                }
-              }));
-              console.log('✅ Four.meme data added for BNB token:', mint);
-            }
-          } catch (error) {
-            console.warn('❌ Failed to fetch Four.meme data for BNB token:', mint, error);
-          }
-        }
       }
     };
 
@@ -678,7 +689,7 @@ export default function UsernamePage() {
     return () => {
       controller.abort();
     };
-  }, [userData?.portfolios, tokenMeta, extraMeta, fetchPumpFunImages, fetchFourMemeData, priceChanges24h, marketCaps]);
+  }, [userData?.portfolios, tokenMeta, extraMeta, fetchPumpFunImages, priceChanges24h, marketCaps]);
 
   // Calculate portfolio stats
   const portfolioStats = useMemo(() => {
