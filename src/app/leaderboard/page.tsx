@@ -668,7 +668,7 @@ export default function LeaderboardPage() {
                                     src={meta.logoURI}
                                     alt={meta?.symbol || "Token"}
                                     className="w-5 h-5 sm:w-6 sm:h-6 rounded-full"
-                                    fallbackSrc="/placeholder-token.svg"
+                                    fallbackSrc="/placeholder-token.svg?v=2"
                                   />
                                 ) : (
                                   <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-gray-600 flex items-center justify-center text-white text-xs">

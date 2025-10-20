@@ -807,7 +807,7 @@ export default function UsernamePage() {
                         >
                           <div className="w-6 h-6 rounded-full border border-white/20 overflow-hidden">
                             <Image
-                              src={currentUserSession.profilePicture || '/placeholder-token.svg'}
+                              src={currentUserSession.profilePicture || '/placeholder-token.svg?v=2'}
                               alt={currentUserSession.username}
                               width={24}
                               height={24}
@@ -1068,8 +1068,8 @@ export default function UsernamePage() {
                               <TokenImage
                                 src={meta?.logoURI || undefined}
                                 alt={meta?.symbol || "Token"}
-                                className="w-8 h-8 rounded-lg border border-white/20"
-                                fallbackSrc="/placeholder-token.svg"
+                                className="w-12 h-12 rounded-lg border border-white/20"
+                                fallbackSrc="/placeholder-token.svg?v=2"
                               />
                               {currentUserSession && currentUserSession.username === username && (
                                 <button
@@ -1083,7 +1083,7 @@ export default function UsernamePage() {
                           );
                         })}
                         {hiddenCount > 0 && (
-                          <div className="w-8 h-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-xs text-white/60">
+                          <div className="w-12 h-12 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-xs text-white/60">
                             +{hiddenCount}
                           </div>
                         )}
@@ -1129,8 +1129,8 @@ export default function UsernamePage() {
                               <TokenImage
                                 src={meta?.logoURI || undefined}
                                 alt={meta?.symbol || "Token"}
-                                className="w-8 h-8 rounded-lg border border-white/20"
-                                fallbackSrc="/placeholder-token.svg"
+                                className="w-12 h-12 rounded-lg border border-white/20"
+                                fallbackSrc="/placeholder-token.svg?v=2"
                               />
                               <div className="min-w-0 flex-1">
                                 <div className="text-white font-medium truncate">

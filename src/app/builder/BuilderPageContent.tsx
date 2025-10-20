@@ -1786,8 +1786,8 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
                               <TokenImage
                                 src={meta?.logoURI || undefined}
                                 alt={meta?.symbol || "Token"}
-                                className="w-8 h-8 rounded-lg border border-white/20"
-                                fallbackSrc="/placeholder-token.svg"
+                                className="w-12 h-12 rounded-lg border border-white/20"
+                                fallbackSrc="/placeholder-token.svg?v=2"
                               />
                               {!isSharedPortfolio && (
                                 <button
@@ -1801,7 +1801,7 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
                           );
                         })}
                         {hiddenCount > 0 && (
-                          <div className="w-8 h-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-xs text-white/60">
+                          <div className="w-12 h-12 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-xs text-white/60">
                             +{hiddenCount}
                           </div>
                         )}
@@ -1874,8 +1874,8 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
                                   <TokenImage
                                     src={meta?.logoURI || undefined}
                                     alt={meta?.symbol || "Token"}
-                                    className="w-8 h-8 rounded-lg"
-                                    fallbackSrc="/placeholder-token.svg"
+                                    className="w-12 h-12 rounded-lg"
+                                    fallbackSrc="/placeholder-token.svg?v=2"
                                   />
                                   <div>
                                     <div className="font-medium text-white">

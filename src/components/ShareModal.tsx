@@ -125,7 +125,7 @@ export default function ShareModal({ isOpen, onClose, portfolio, portfolioStats,
                   return (
                     <div key={row.mint} className="w-12 h-12 sm:w-32 sm:h-32 overflow-hidden rounded-lg border border-white/20">
                       <Image 
-                        src={meta?.logoURI || '/placeholder-token.svg'} 
+                        src={meta?.logoURI || '/placeholder-token.svg?v=2'} 
                         alt={meta?.symbol || 'Token'} 
                         width={128}
                         height={128}

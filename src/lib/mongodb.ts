@@ -23,8 +23,8 @@ export async function connectToDatabase(): Promise<Db> {
     
     // Create a new client for each connection attempt (better for serverless)
     client = new MongoClient(uri, {
-      serverSelectionTimeoutMS: 10000,
-      connectTimeoutMS: 15000,
+      serverSelectionTimeoutMS: 30000, // Increased timeout
+      connectTimeoutMS: 30000, // Increased timeout
       socketTimeoutMS: 45000,
       maxPoolSize: 1, // Reduce pool size for serverless
       minPoolSize: 0, // Allow zero connections in serverless
@@ -70,6 +70,18 @@ export async function connectToDatabase(): Promise<Db> {
       code: (error as Error & { code?: string })?.code || 'No code',
       stack: error instanceof Error ? error.stack : 'No stack trace'
     });
+    
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes('Server selection timed out')) {
+        console.error('🔍 Troubleshooting tips:');
+        console.error('1. Check if your IP address is whitelisted in MongoDB Atlas Network Access');
+        console.error('2. Verify your connection string is correct');
+        console.error('3. Ensure your MongoDB Atlas cluster is running');
+        console.error('4. Check if you have internet connectivity');
+      }
+    }
+    
     throw new Error(`MongoDB connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

@@ -87,7 +87,7 @@ export default function NavigationBar({ username, profilePicture, isCurrentUser 
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full border border-white/20 overflow-hidden bg-gradient-to-br from-[var(--brand-start)] to-[var(--brand-end)]">
                 <Image
-                  src={profilePicture || '/placeholder-token.svg'}
+                  src={profilePicture || '/placeholder-token.svg?v=2'}
                   alt={username}
                   width={48}
                   height={48}

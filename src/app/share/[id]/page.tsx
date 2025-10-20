@@ -753,8 +753,8 @@ export default function PublicPortfolioView() {
                             <TokenImage
                               src={meta?.logoURI || undefined}
                               alt={meta?.symbol || "Token"}
-                              className="w-8 h-8 rounded-lg"
-                              fallbackSrc="/placeholder-token.svg"
+                              className="w-12 h-12 rounded-lg"
+                              fallbackSrc="/placeholder-token.svg?v=2"
                             />
                             <div>
                               <div className="font-medium text-white">

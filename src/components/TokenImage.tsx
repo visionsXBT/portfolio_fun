@@ -13,7 +13,7 @@ export default function TokenImage({
   src, 
   alt, 
   className = "w-8 h-8 rounded-lg", 
-  fallbackSrc = "/placeholder-token.svg" 
+  fallbackSrc = "/placeholder-token.svg?v=2" 
 }: TokenImageProps) {
   console.log('🖼️ TokenImage rendered with src:', src, 'alt:', alt);
   
@@ -76,8 +76,14 @@ export default function TokenImage({
   // If no src provided, use fallback immediately
   if (!src || src === '') {
     return (
-      <div className={`${className} bg-gray-600 flex items-center justify-center text-white text-xs font-medium`}>
-        ?
+      <div className={`${className} relative overflow-hidden bg-gray-600`}>
+        <img
+          src={fallbackSrc}
+          alt={alt}
+          className="w-full h-full object-cover"
+          loading="lazy"
+          crossOrigin="anonymous"
+        />
       </div>
     );
   }
