@@ -4,7 +4,7 @@ import "./globals.css";
 import PageTransition from "@/components/PageTransition";
 import BottomBar from "@/components/BottomBar";
 import ClientBody from "@/components/ClientBody";
-import PrivyProvider from "@/components/PrivyProvider";
+// import PrivyProvider from "@/components/PrivyProvider"; // COMMENTED OUT - causing build errors
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -76,12 +76,12 @@ export default function RootLayout({
         {/* TODO: Fix Privy provider initialization error during build */}
         {/* Error: Cannot initialize the Privy provider with an invalid Privy app ID */}
         {/* Need to either remove Privy completely or fix the app ID configuration */}
-        <PrivyProvider>
+        {/* <PrivyProvider> */}
           <PageTransition>
             {children}
             <BottomBar />
           </PageTransition>
-        </PrivyProvider>
+        {/* </PrivyProvider> */}
       </ClientBody>
     </html>
   );
