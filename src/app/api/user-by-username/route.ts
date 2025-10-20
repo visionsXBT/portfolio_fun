@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
       accountType: user.accountType,
       createdAt: user.createdAt,
       profilePicture: user.profilePicture,
+      displayName: user.displayName,
       portfolios: user.portfolios || []
     };
 

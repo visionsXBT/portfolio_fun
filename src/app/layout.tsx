@@ -4,6 +4,7 @@ import "./globals.css";
 import PageTransition from "@/components/PageTransition";
 import BottomBar from "@/components/BottomBar";
 import ClientBody from "@/components/ClientBody";
+import PrivyProvider from "@/components/PrivyProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -72,10 +73,12 @@ export default function RootLayout({
         />
       </head>
       <ClientBody className={`${golosText.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <PageTransition>
-          {children}
-          <BottomBar />
-        </PageTransition>
+        <PrivyProvider>
+          <PageTransition>
+            {children}
+            <BottomBar />
+          </PageTransition>
+        </PrivyProvider>
       </ClientBody>
     </html>
   );

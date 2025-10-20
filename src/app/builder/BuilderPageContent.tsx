@@ -14,6 +14,7 @@ import JumpingDots from "@/components/JumpingDots";
 import ShareModal from "@/components/ShareModal";
 import ProfilePictureUpload from "@/components/ProfilePictureUpload";
 import UserSearchBar from "@/components/UserSearchBar";
+import { useLogout, useWallets, usePrivy } from '@privy-io/react-auth';
 
 type PortfolioRow = {
   mint: string;
@@ -45,8 +46,14 @@ function isValidBNBAddress(value: string): boolean {
   return bnbAddressRegex.test(value);
 }
 
+function isValidETHAddress(value: string): boolean {
+  // Ethereum uses 0x format, 42 characters (same as BSC but we'll differentiate by context)
+  const ethAddressRegex = /^0x[a-fA-F0-9]{40}$/;
+  return ethAddressRegex.test(value);
+}
+
 function isValidTokenAddress(value: string): boolean {
-  return isValidMint(value) || isValidBNBAddress(value);
+  return isValidMint(value) || isValidBNBAddress(value) || isValidETHAddress(value);
 }
 
 function extractMintFromInput(raw: string): string | null {
@@ -55,8 +62,8 @@ function extractMintFromInput(raw: string): string | null {
   // Check if it's a valid Solana mint
   if (isValidMint(trimmed)) return trimmed;
   
-  // Check if it's a valid BNB address
-  if (isValidBNBAddress(trimmed)) return trimmed;
+  // Check if it's a valid ETH/BNB address (both use 0x format)
+  if (isValidETHAddress(trimmed)) return trimmed;
   
   // Try to extract Solana mint from text
   const base58Re = /[1-9A-HJ-NP-Za-km-z]{32,48}/g;
@@ -67,12 +74,12 @@ function extractMintFromInput(raw: string): string | null {
     }
   }
   
-  // Try to extract BNB address from text
-  const bnbRe = /0x[a-fA-F0-9]{40}/g;
-  const bnbMatches = trimmed.match(bnbRe);
-  if (bnbMatches) {
-    for (const match of bnbMatches) {
-      if (isValidBNBAddress(match)) return match;
+  // Try to extract ETH/BNB address from text
+  const ethRe = /0x[a-fA-F0-9]{40}/g;
+  const ethMatches = trimmed.match(ethRe);
+  if (ethMatches) {
+    for (const match of ethMatches) {
+      if (isValidETHAddress(match)) return match;
     }
   }
   
@@ -138,6 +145,9 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { logout } = useLogout();
+  const { wallets } = useWallets();
+  // const { authenticated } = usePrivy(); // COMMENTED OUT (causing issues)
 
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [portfolioInputs, setPortfolioInputs] = useState<Record<string, string>>({});
@@ -224,6 +234,9 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
                     } else if (isValidBNBAddress(mint)) {
                       console.log('🖼️ Fetching BNB token image...');
                       logoURI = await fetchBNBTokenImage(mint);
+                    } else if (isValidETHAddress(mint)) {
+                      console.log('🖼️ Fetching ETH token image...');
+                      logoURI = await fetchETHTokenImage(mint);
                     }
                     
                     console.log('🖼️ Individual image result:', logoURI);
@@ -517,33 +530,71 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
   }, [userAccount]);
 
   const handleLogout = useCallback(async () => {
-    console.log('🚪 Logging out user...');
+    console.log('🔴 Starting logout process...');
+    
     try {
-      // Delete session from database
-      const response = await fetch('/api/session', {
-        method: 'DELETE'
+      // Clear session from server using DELETE method
+      console.log('🔴 Clearing session from server...');
+      await fetch('/api/session', {
+        method: 'DELETE',
+        credentials: 'include'
       });
+      console.log('✅ Session cleared from server');
       
-      if (response.ok) {
-        console.log('✅ Session deleted from database');
-      } else {
-        console.warn('⚠️ Failed to delete session from database');
+      // Clear localStorage and sessionStorage immediately
+      console.log('🔴 Clearing local storage...');
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Clear all possible caches
+      if ('caches' in window) {
+        caches.keys().then(names => {
+          names.forEach(name => {
+            caches.delete(name);
+          });
+        });
       }
+
+      // Force disconnect all wallets before logout
+      if (wallets && wallets.length > 0) {
+        console.log('🔴 Disconnecting wallets...');
+        wallets.forEach(wallet => {
+          try {
+            wallet.disconnect();
+          } catch (error) {
+            // Silent fail
+          }
+        });
+      }
+
+      // Logout from Privy - COMMENTED OUT (causing issues)
+      // console.log('🔴 Logging out from Privy...');
+      // await logout();
+      // console.log('✅ Logged out from Privy');
+      
+      // Add a small delay to ensure everything is cleared
+      console.log('🔴 Waiting 500ms before refresh...');
+      setTimeout(() => {
+        console.log('🔴 Refreshing page...');
+        window.location.reload();
+      }, 500);
     } catch (error) {
-      console.error('❌ Error deleting session:', error);
+      console.error('❌ Error during logout:', error);
+      // Even if there's an error, still refresh
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     }
-    
-    // Clear local state
-    setPortfolios([]);
-    setPortfolioInputs({});
-    setUserAccount(null);
-    setHasLoadedUserPortfolios(false);
-    setIsSharedPortfolio(false);
-    
-    // Redirect to landing page
-    router.push('/');
-    console.log('✅ User logged out successfully');
-  }, [router]);
+  }, [logout, wallets]);
+
+  // Detect wallet disconnection and auto-logout - COMMENTED OUT (causing issues)
+  // useEffect(() => {
+  //   // If user was authenticated but now has no wallets, they disconnected
+  //   if (userAccount && userAccount.accountType === 'wallet' && !authenticated && wallets.length === 0) {
+  //     console.log('🔌 Wallet disconnected, auto-logging out...');
+  //     handleLogout();
+  //   }
+  // }, [authenticated, wallets, userAccount, handleLogout]);
 
   const handleSharePortfolio = useCallback((portfolio: Portfolio) => {
     setSelectedPortfolioForShare(portfolio);
@@ -1003,6 +1054,58 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
     return null;
   }, [scrapeFourMemeImage]);
 
+  // ETH token image fetching function
+  const fetchETHTokenImage = useCallback(async (address: string): Promise<string | null> => {
+    console.log('🔍 Trying ETH token image sources for address:', address);
+    
+    // Try CoinGecko API for Ethereum tokens first
+    try {
+      const coinGeckoUrl = `https://api.coingecko.com/api/v3/coins/ethereum/contract/${address.toLowerCase()}`;
+      console.log('🔄 Trying CoinGecko for ETH token:', coinGeckoUrl);
+      
+      const response = await fetch(coinGeckoUrl, {
+        signal: AbortSignal.timeout(5000)
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.image?.large || data.image?.small || data.image?.thumb) {
+          const imageUrl = data.image.large || data.image.small || data.image.thumb;
+          console.log('✅ Found image from CoinGecko:', imageUrl);
+          return imageUrl;
+        }
+      }
+    } catch (error) {
+      console.log('❌ CoinGecko failed:', (error as Error).message);
+    }
+    
+    // Try Moralis API for ETH tokens
+    try {
+      const moralisUrl = `https://deep-index.moralis.io/api/v2.2/token-metadata?chain=eth&addresses[]=${address}`;
+      console.log('🔄 Trying Moralis for ETH token:', moralisUrl);
+      
+      const response = await fetch(moralisUrl, {
+        headers: {
+          'X-API-Key': process.env.NEXT_PUBLIC_MORALIS_API_KEY || '',
+        },
+        signal: AbortSignal.timeout(5000)
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data[0]?.logo) {
+          console.log('✅ Found image from Moralis:', data[0].logo);
+          return data[0].logo;
+        }
+      }
+    } catch (error) {
+      console.log('❌ Moralis failed:', (error as Error).message);
+    }
+    
+    console.log('❌ No ETH token images found for address:', address);
+    return null;
+  }, []);
+
   const addRow = useCallback(async (portfolioId: string) => {
     const inputValue = portfolioInputs[portfolioId] || "";
     const mint = extractMintFromInput(inputValue);
@@ -1053,8 +1156,8 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
         name = pair.baseToken?.name;
         console.log('📊 DexScreener metadata:', { symbol, name });
         
-        // Extract price and market cap data from DexScreener for BNB tokens
-        if (isValidBNBAddress(mint)) {
+        // Extract price and market cap data from DexScreener for BNB and ETH tokens
+        if (isValidBNBAddress(mint) || isValidETHAddress(mint)) {
           const dexPrice = parseFloat(pair.priceUsd);
           const dexPriceChange = parseFloat(pair.priceChange?.h24);
           const dexMarketCap = parseFloat(pair.marketCap);
@@ -1077,7 +1180,7 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
       } else {
         console.log('❌ No DexScreener metadata found');
         
-        // Try CoinGecko as fallback for BNB tokens
+        // Try CoinGecko as fallback for BNB and ETH tokens
         if (isValidBNBAddress(mint)) {
           try {
             console.log('🔄 Trying CoinGecko for BNB token metadata...');
@@ -1115,6 +1218,43 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
           } catch (error) {
             console.log('❌ CoinGecko metadata failed:', (error as Error).message);
           }
+        } else if (isValidETHAddress(mint)) {
+          try {
+            console.log('🔄 Trying CoinGecko for ETH token metadata...');
+            const coinGeckoResponse = await fetch(`https://api.coingecko.com/api/v3/coins/ethereum/contract/${mint.toLowerCase()}`, {
+              signal: AbortSignal.timeout(5000)
+            });
+            
+            if (coinGeckoResponse.ok) {
+              const coinGeckoData = await coinGeckoResponse.json();
+              symbol = coinGeckoData.symbol?.toUpperCase();
+              name = coinGeckoData.name;
+              console.log('📊 CoinGecko ETH metadata:', { symbol, name });
+              
+              // Extract price data from CoinGecko as well
+              if (coinGeckoData.market_data) {
+                const cgPrice = coinGeckoData.market_data.current_price?.usd;
+                const cgPriceChange = coinGeckoData.market_data.price_change_percentage_24h;
+                const cgMarketCap = coinGeckoData.market_data.market_cap?.usd;
+                
+                if (cgPrice || cgPriceChange || cgMarketCap) {
+                  console.log('💰 CoinGecko ETH price data:', { 
+                    price: cgPrice, 
+                    priceChange24h: cgPriceChange, 
+                    marketCap: cgMarketCap 
+                  });
+                  
+                  fourMemeData = {
+                    price: cgPrice || undefined,
+                    priceChange24h: cgPriceChange || undefined,
+                    marketCap: cgMarketCap || undefined
+                  };
+                }
+              }
+            }
+          } catch (error) {
+            console.log('❌ CoinGecko ETH metadata failed:', (error as Error).message);
+          }
         }
       }
 
@@ -1130,6 +1270,13 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
         // BNB token - try BNB-specific sources and Four.meme data
         console.log('🖼️ Fetching BNB token image...');
         logoURI = await fetchBNBTokenImage(mint);
+        
+        // Use DexScreener/CoinGecko price data only
+        console.log('💰 Using DexScreener/CoinGecko price data');
+      } else if (isValidETHAddress(mint)) {
+        // ETH token - try ETH-specific sources
+        console.log('🖼️ Fetching ETH token image...');
+        logoURI = await fetchETHTokenImage(mint);
         
         // Use DexScreener/CoinGecko price data only
         console.log('💰 Using DexScreener/CoinGecko price data');
@@ -1168,6 +1315,9 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
         } else if (isValidBNBAddress(mint)) {
           console.log('🖼️ Trying BNB token image as fallback...');
           logoURI = await fetchBNBTokenImage(mint);
+        } else if (isValidETHAddress(mint)) {
+          console.log('🖼️ Trying ETH token image as fallback...');
+          logoURI = await fetchETHTokenImage(mint);
         }
         
         setExtraMeta(prev => {
@@ -1258,7 +1408,7 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
         console.error('❌ Failed to save portfolio after adding token:', error);
       }
     }
-  }, [portfolioInputs, fetchPumpFunImages, fetchBNBTokenImage, portfolios, userAccount, extraMeta, tokenMeta, priceChanges24h, marketCaps]);
+  }, [portfolioInputs, fetchPumpFunImages, fetchBNBTokenImage, fetchETHTokenImage, portfolios, userAccount, extraMeta, tokenMeta, priceChanges24h, marketCaps]);
 
   const removeRow = useCallback(async (portfolioId: string, mint: string) => {
     // Update local state first
@@ -1424,8 +1574,8 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
                 nextExtraMeta[mint] = {
                   symbol: pair.baseToken?.symbol,
                   name: pair.baseToken?.name,
-                  // Include price data for BNB tokens
-                  ...(isValidBNBAddress(mint) && {
+                  // Include price data for BNB and ETH tokens
+                  ...((isValidBNBAddress(mint) || isValidETHAddress(mint)) && {
                     price: dexPrice || undefined,
                     priceChange24h: dexPriceChange || undefined,
                     marketCap: dexMarketCap || undefined
@@ -1470,7 +1620,7 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
       .catch(() => {});
 
     return () => controller.abort();
-  }, [portfolios, tokenMeta, extraMeta, fetchPumpFunImages, fetchBNBTokenImage, scrapeFourMemeImage, hasLoadedUserPortfolios]);
+  }, [portfolios, tokenMeta, extraMeta, fetchPumpFunImages, fetchBNBTokenImage, fetchETHTokenImage, scrapeFourMemeImage, hasLoadedUserPortfolios]);
 
   // Save portfolios to database when they change
   // DISABLED: Now handled directly in addRow function to prevent infinite loops

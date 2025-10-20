@@ -6,31 +6,77 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrophy, faUser, faCog, faSignOutAlt, faBars, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { useLogout, useWallets } from '@privy-io/react-auth';
 
 interface NavigationBarProps {
   username: string;
   profilePicture?: string;
   isCurrentUser?: boolean;
+  displayName?: string;
 }
 
-export default function NavigationBar({ username, profilePicture, isCurrentUser = false }: NavigationBarProps) {
+export default function NavigationBar({ username, profilePicture, isCurrentUser = false, displayName }: NavigationBarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
+  const { logout } = useLogout();
+  const { wallets } = useWallets();
 
   const handleLogout = async () => {
+    console.log('🔴 Starting logout process...');
+    
     try {
-      const response = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'logout' })
+      // Clear session from server using DELETE method
+      console.log('🔴 Clearing session from server...');
+      await fetch('/api/session', {
+        method: 'DELETE',
+        credentials: 'include'
       });
-
-      if (response.ok) {
-        router.push('/');
-      }
+      console.log('✅ Session cleared from server');
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error('❌ Error clearing session:', error);
     }
+    
+    // Clear local storage and session storage
+    console.log('🔴 Clearing local storage...');
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Clear all caches
+    if ('caches' in window) {
+      caches.keys().then(names => {
+        names.forEach(name => {
+          caches.delete(name);
+        });
+      });
+    }
+    
+    // Disconnect wallets if any
+    if (wallets && wallets.length > 0) {
+      console.log('🔴 Disconnecting wallets...');
+      wallets.forEach(wallet => {
+        try {
+          wallet.disconnect();
+        } catch (error) {
+          // Silent fail
+        }
+      });
+    }
+    
+    // Logout from Privy - COMMENTED OUT (causing issues)
+    // try {
+    //   console.log('🔴 Logging out from Privy...');
+    //   await logout();
+    //   console.log('✅ Logged out from Privy');
+    // } catch (error) {
+    //   console.error('❌ Error logging out from Privy:', error);
+    // }
+    
+    // Add a small delay to ensure everything is cleared
+    console.log('🔴 Waiting 500ms before refresh...');
+    setTimeout(() => {
+      console.log('🔴 Refreshing page...');
+      window.location.reload();
+    }, 500);
   };
 
   const navigationItems = [
@@ -85,18 +131,24 @@ export default function NavigationBar({ username, profilePicture, isCurrentUser 
               />
             </Link>
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full border border-white/20 overflow-hidden bg-gradient-to-br from-[var(--brand-start)] to-[var(--brand-end)]">
-                <Image
-                  src={profilePicture || '/placeholder-token.svg?v=2'}
-                  alt={username}
-                  width={48}
-                  height={48}
-                  className="w-full h-full object-cover"
-                />
+              <div className="w-12 h-12 rounded-full border border-white/20 overflow-hidden">
+                {profilePicture ? (
+                  <Image
+                    src={profilePicture}
+                    alt={username}
+                    width={48}
+                    height={48}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-[var(--brand-start)] to-[var(--brand-end)] flex items-center justify-center text-white font-bold text-lg">
+                    {username.charAt(0).toUpperCase()}
+                  </div>
+                )}
               </div>
               <div className="text-left">
                 <div className="text-white font-medium text-lg">
-                  {username}
+                  {displayName || username}
                 </div>
                 <div className="text-white/60 text-sm">
                   Portfolio Creator

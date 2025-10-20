@@ -5,20 +5,31 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrophy, faUser, faCog, faSignOutAlt, faBars, faTimes, faSave, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { faTrophy, faUser, faCog, faSignOutAlt, faBars, faTimes, faSave, faEye, faEyeSlash, faWallet } from '@fortawesome/free-solid-svg-icons';
+import { useLogout, useWallets, useLogin } from '@privy-io/react-auth';
 import UserSearchBar from '@/components/UserSearchBar';
 import SignInModal from '@/components/SignInModal';
 import AccountModal from '@/components/AccountModal';
+import ProfilePictureUpload from '@/components/ProfilePictureUpload';
 
 interface UserSession {
-  userId: string;
+  id: string;
   username: string;
+  email?: string;
   profilePicture?: string;
+  accountType?: 'email' | 'wallet';
+  walletAddress?: string;
+  usernameSet?: boolean;
+  displayName?: string;
 }
 
 export default function SettingsPage() {
   const params = useParams();
   const router = useRouter();
+  const { logout } = useLogout();
+  const { wallets } = useWallets();
+  const { login } = useLogin();
+  // const { authenticated, user, getAccessToken } = usePrivy();
   const username = params.username as string;
   
   const [currentUserSession, setCurrentUserSession] = useState<UserSession | null>(null);
@@ -34,6 +45,15 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  
+  // Wallet connection state
+  // const [isConnectingWallet, setIsConnectingWallet] = useState(false);
+  const [walletMessage, setWalletMessage] = useState('');
+  
+  // Display name change state (for wallet users)
+  const [newDisplayName, setNewDisplayName] = useState('');
+  const [isChangingDisplayName, setIsChangingDisplayName] = useState(false);
+  const [displayNameMessage, setDisplayNameMessage] = useState('');
 
 
   // Check user session
@@ -66,23 +86,85 @@ export default function SettingsPage() {
   }, [username, router]);
 
   const handleLogout = async () => {
+    console.log('🔴 Starting logout process...');
+    
     try {
-      const response = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'logout' })
+      // Clear session from server using DELETE method
+      console.log('🔴 Clearing session from server...');
+      await fetch('/api/session', {
+        method: 'DELETE',
+        credentials: 'include'
       });
-
-      if (response.ok) {
-        router.push('/');
-      }
+      console.log('✅ Session cleared from server');
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error('❌ Error clearing session:', error);
     }
+    
+    // Clear local storage and session storage
+    console.log('🔴 Clearing local storage...');
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Clear all caches
+    if ('caches' in window) {
+      caches.keys().then(names => {
+        names.forEach(name => {
+          caches.delete(name);
+        });
+      });
+    }
+    
+    // Clear React state immediately
+    setCurrentUserSession(null);
+    setShowSignInModal(true);
+    
+    // Disconnect wallets if any
+    if (wallets && wallets.length > 0) {
+      console.log('🔴 Disconnecting wallets...');
+      wallets.forEach(wallet => {
+        try {
+          wallet.disconnect();
+        } catch (error) {
+          // Silent fail
+        }
+      });
+    }
+    
+    // Logout from Privy - COMMENTED OUT (causing issues)
+    // try {
+    //   console.log('🔴 Logging out from Privy...');
+    //   await logout();
+    //   console.log('✅ Logged out from Privy');
+    // } catch (error) {
+    //   console.error('❌ Error logging out from Privy:', error);
+    // }
+    
+    // Add a small delay to ensure everything is cleared
+    console.log('🔴 Waiting 500ms before refresh...');
+    setTimeout(() => {
+      console.log('🔴 Refreshing page...');
+      window.location.reload();
+    }, 500);
   };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate that all password fields are filled
+    if (!currentPassword.trim()) {
+      setSaveMessage('Current password is required');
+      return;
+    }
+    
+    if (!newPassword.trim()) {
+      setSaveMessage('New password is required');
+      return;
+    }
+    
+    if (!confirmPassword.trim()) {
+      setSaveMessage('Please confirm your new password');
+      return;
+    }
     
     if (newPassword !== confirmPassword) {
       setSaveMessage('Passwords do not match');
@@ -125,6 +207,103 @@ export default function SettingsPage() {
     }
   };
 
+  const handleWalletConnection = async () => {
+    // setIsConnectingWallet(true);
+    setWalletMessage('');
+    
+    try {
+      
+      // First, authenticate with Privy - COMMENTED OUT (causing issues)
+      // await login();
+      
+      // Get access token from Privy
+      // const accessToken = await getAccessToken();
+      // if (!accessToken) {
+      //   throw new Error('Failed to get access token from Privy');
+      // }
+      
+      // Connect wallet to existing email account
+      // const response = await fetch('/api/auth', {
+      //   method: 'POST',
+      //   headers: { 
+      //     'Content-Type': 'application/json',
+      //     'Authorization': `Bearer ${accessToken}`
+      //   },
+      //   body: JSON.stringify({ 
+      //     action: 'connect-wallet'
+      //   })
+      // });
+      
+      // const data = await response.json();
+      
+      // if (data.success) {
+      //   setWalletMessage('Wallet connected successfully! Refreshing page...');
+      //   // Refresh the page to update the user session
+      //   setTimeout(() => {
+      //     window.location.reload();
+      //   }, 1500);
+      // } else {
+      //   setWalletMessage(data.error || 'Failed to connect wallet');
+      // }
+    } catch (error) {
+      setWalletMessage('Wallet connection failed. Please try again.');
+    } finally {
+      // setIsConnectingWallet(false);
+    }
+  };
+
+  const handleDisplayNameChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newDisplayName.trim()) {
+      setDisplayNameMessage('Please enter a display name');
+      return;
+    }
+    
+    if (newDisplayName.length < 3) {
+      setDisplayNameMessage('Display name must be at least 3 characters');
+      return;
+    }
+    
+    if (newDisplayName.length > 20) {
+      setDisplayNameMessage('Display name must be 20 characters or less');
+      return;
+    }
+    
+    setIsChangingDisplayName(true);
+    setDisplayNameMessage('');
+    
+    try {
+      const response = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action: 'change-display-name',
+          newDisplayName: newDisplayName.trim()
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setDisplayNameMessage('Display name set successfully!');
+        setNewDisplayName('');
+        // Update the current user session
+        setCurrentUserSession(prev => prev ? { 
+          ...prev, 
+          displayName: newDisplayName.trim(), 
+          usernameSet: true 
+        } : null);
+      } else {
+        setDisplayNameMessage(data.error || 'Failed to set display name');
+      }
+    } catch (error) {
+      setDisplayNameMessage('Network error. Please try again.');
+    } finally {
+      setIsChangingDisplayName(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -140,7 +319,7 @@ export default function SettingsPage() {
           <h1 className="text-2xl font-bold text-white mb-4">Please Sign In</h1>
           <p className="text-white/60 mb-6">You need to be signed in to access settings.</p>
           <button
-            onClick={() => setShowSignInModal(true)}
+            onClick={() => router.push('/')}
             className="rounded-lg gradient-button px-6 py-3 text-white"
           >
             Sign In
@@ -172,18 +351,24 @@ export default function SettingsPage() {
               />
             </Link>
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full border border-white/20 overflow-hidden bg-gradient-to-br from-[var(--brand-start)] to-[var(--brand-end)]">
-                <Image
-                  src={currentUserSession.profilePicture || '/placeholder-token.svg?v=2'}
-                  alt={currentUserSession.username}
-                  width={48}
-                  height={48}
-                  className="w-full h-full object-cover"
-                />
+              <div className="w-12 h-12 rounded-full border border-white/20 overflow-hidden">
+                {currentUserSession.profilePicture ? (
+                  <Image
+                    src={currentUserSession.profilePicture}
+                    alt={currentUserSession.username}
+                    width={48}
+                    height={48}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-[var(--brand-start)] to-[var(--brand-end)] flex items-center justify-center text-white font-bold text-lg">
+                    {currentUserSession.username.charAt(0).toUpperCase()}
+                  </div>
+                )}
               </div>
-              <div className="text-center">
+              <div className="text-left">
                 <div className="text-white font-medium text-lg">
-                  {currentUserSession.username}
+                  {currentUserSession.displayName || currentUserSession.username}
                 </div>
                 <div className="text-white/60 text-sm">
                   Portfolio Creator
@@ -220,17 +405,6 @@ export default function SettingsPage() {
 
           {/* Spacer */}
           <div className="flex-1"></div>
-
-          {/* Logout Button */}
-          <div className="pt-4 border-t border-white/10">
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors w-full"
-            >
-              <FontAwesomeIcon icon={faSignOutAlt} className="w-5 h-5" />
-              <span className="font-medium">Sign Out</span>
-            </button>
-          </div>
         </div>
       </div>
 
@@ -276,28 +450,142 @@ export default function SettingsPage() {
 
           {/* Settings Content */}
           <div className="space-y-6">
+            {/* Profile Picture Upload */}
+            <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6">
+              <h2 className="text-xl font-semibold text-white mb-4">Profile Picture</h2>
+              <ProfilePictureUpload
+                currentImage={currentUserSession.profilePicture}
+                onImageChange={(newProfilePicture: string | null) => {
+                  setCurrentUserSession(prev => prev ? { ...prev, profilePicture: newProfilePicture || undefined } : null);
+                }}
+                userId={currentUserSession.id}
+                usernameInitial={currentUserSession.username.charAt(0).toUpperCase()}
+              />
+            </div>
+
             {/* Account Information */}
             <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6">
               <h2 className="text-xl font-semibold text-white mb-4">Account Information</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm text-white/80 mb-2">Username</label>
+                  <label className="block text-sm text-white/80 mb-2">
+                    {currentUserSession.accountType === 'wallet' ? 'Wallet Address' : 'Username'}
+                  </label>
                   <div className="bg-white/10 border border-white/20 rounded-md px-3 py-2 text-white">
-                    {currentUserSession.username}
+                    {currentUserSession.accountType === 'wallet' ? currentUserSession.walletAddress : currentUserSession.username}
                   </div>
                 </div>
+                {currentUserSession.accountType === 'wallet' && currentUserSession.displayName && (
+                  <div>
+                    <label className="block text-sm text-white/80 mb-2">Display Name</label>
+                    <div className="bg-white/10 border border-white/20 rounded-md px-3 py-2 text-white">
+                      {currentUserSession.displayName}
+                    </div>
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm text-white/80 mb-2">Account Type</label>
                   <div className="bg-white/10 border border-white/20 rounded-md px-3 py-2 text-white">
-                    Email Account
+                    {currentUserSession.accountType === 'wallet' ? 'Wallet Account' : 'User Account'}
                   </div>
                 </div>
+                {currentUserSession.email && (
+                  <div>
+                    <label className="block text-sm text-white/80 mb-2">Email</label>
+                    <div className="bg-white/10 border border-white/20 rounded-md px-3 py-2 text-white">
+                      {currentUserSession.email}
+                    </div>
+                  </div>
+                )}
+                {currentUserSession.accountType === 'wallet' && currentUserSession.walletAddress && (
+                  <div>
+                    <label className="block text-sm text-white/80 mb-2">Wallet Address</label>
+                    <div className="bg-white/10 border border-white/20 rounded-md px-3 py-2 text-white font-mono text-sm">
+                      {currentUserSession.walletAddress}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Change Password */}
-            <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6">
-              <h2 className="text-xl font-semibold text-white mb-4">Change Password</h2>
+            {/* Display Name Change (Wallet Users Only) */}
+            {currentUserSession.accountType === 'wallet' && !currentUserSession.usernameSet && (
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6">
+                <h2 className="text-xl font-semibold text-white mb-4">Set Your Display Name</h2>
+                <p className="text-white/60 text-sm mb-4">
+                  Choose a display name that will be shown on your profile. You can only set this once!
+                </p>
+                <form onSubmit={handleDisplayNameChange} className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-white/80 mb-2">Display Name</label>
+                    <input
+                      type="text"
+                      value={newDisplayName}
+                      onChange={(e) => setNewDisplayName(e.target.value)}
+                      className="w-full bg-white/10 border border-white/20 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
+                      placeholder="Enter your display name"
+                      required
+                      minLength={3}
+                      maxLength={20}
+                    />
+                  </div>
+                  
+                  {displayNameMessage && (
+                    <div className={`text-sm ${displayNameMessage.includes('successfully') ? 'text-green-400' : 'text-red-400'}`}>
+                      {displayNameMessage}
+                    </div>
+                  )}
+                  
+                  <button
+                    type="submit"
+                    disabled={isChangingDisplayName}
+                    className="w-full bg-[var(--brand-end)] hover:bg-[var(--brand-start)] text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isChangingDisplayName ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span className="ml-2">Setting Display Name...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <FontAwesomeIcon icon={faSave} />
+                        Set Display Name
+                      </>
+                    )}
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* Wallet Connection (Email Users Only) */}
+            {currentUserSession.accountType === 'email' && (
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6">
+                <h2 className="text-xl font-semibold text-white mb-4">Connect Wallet</h2>
+                <p className="text-white/60 text-sm mb-4">
+                  Connect a wallet to your account for additional security and features.
+                </p>
+                <button
+                  onClick={() => {
+                    handleWalletConnection();
+                  }}
+                  disabled={true}
+                  className="flex items-center gap-2 rounded-md bg-white/10 text-white/40 px-4 py-2 text-sm cursor-not-allowed"
+                >
+                  <FontAwesomeIcon icon={faWallet} />
+                  Connect Wallet (Coming Soon)
+                </button>
+                {walletMessage && (
+                  <div className={`text-sm mt-2 ${walletMessage.includes('successfully') ? 'text-green-400' : 'text-red-400'}`}>
+                    {walletMessage}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Change Password (Email Users Only) */}
+            {currentUserSession.accountType === 'email' && (
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6">
+                <h2 className="text-xl font-semibold text-white mb-4">Change Password</h2>
               <form onSubmit={handlePasswordChange} className="space-y-4">
                 <div>
                   <label className="block text-sm text-white/80 mb-2">Current Password</label>
@@ -358,9 +646,24 @@ export default function SettingsPage() {
                   {isSaving ? 'Saving...' : 'Save Changes'}
                 </button>
               </form>
-            </div>
+              </div>
+            )}
           </div>
         </div>
+      </div>
+
+      {/* Fixed Sign Out Button - positioned above terminal */}
+      <div className="fixed bottom-20 left-4 z-40">
+        <button
+          onClick={() => {
+            console.log('🔴 Sign out button clicked!');
+            handleLogout();
+          }}
+          className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors bg-black/20 backdrop-blur-sm border border-red-500/20"
+        >
+          <FontAwesomeIcon icon={faSignOutAlt} className="w-5 h-5" />
+          <span className="font-medium">Sign Out</span>
+        </button>
       </div>
 
       {/* Modals */}
@@ -371,7 +674,7 @@ export default function SettingsPage() {
             onClose={() => setShowSignInModal(false)}
             onSuccess={(username, userId) => {
               setShowSignInModal(false);
-              router.push(`/${username}/settings`);
+              window.location.href = `/${username}/settings`;
             }}
             onSwitchToSignUp={() => {
               setShowSignInModal(false);
@@ -388,7 +691,7 @@ export default function SettingsPage() {
             onClose={() => setShowAccountModal(false)}
             onSuccess={(username, userId) => {
               setShowAccountModal(false);
-              router.push(`/${username}/settings`);
+              window.location.href = `/${username}/settings`;
             }}
             onSwitchToSignIn={() => {
               setShowAccountModal(false);

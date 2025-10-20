@@ -50,6 +50,12 @@ function isValidBNBAddress(value: string): boolean {
   return bnbAddressRegex.test(value);
 }
 
+function isValidETHAddress(value: string): boolean {
+  // Ethereum uses 0x format, 42 characters (same as BSC but we'll differentiate by context)
+  const ethAddressRegex = /^0x[a-fA-F0-9]{40}$/;
+  return ethAddressRegex.test(value);
+}
+
 export default function PublicPortfolioView() {
   const params = useParams();
   const portfolioId = params?.id as string;
@@ -349,6 +355,58 @@ export default function PublicPortfolioView() {
     return null;
   }, [scrapeFourMemeImage]);
 
+  // ETH token image fetching function
+  const fetchETHTokenImage = useCallback(async (address: string): Promise<string | null> => {
+    console.log('🔍 Trying ETH token image sources for address:', address);
+    
+    // Try CoinGecko API for Ethereum tokens first
+    try {
+      const coinGeckoUrl = `https://api.coingecko.com/api/v3/coins/ethereum/contract/${address.toLowerCase()}`;
+      console.log('🔄 Trying CoinGecko for ETH token:', coinGeckoUrl);
+      
+      const response = await fetch(coinGeckoUrl, {
+        signal: AbortSignal.timeout(5000)
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.image?.large || data.image?.small || data.image?.thumb) {
+          const imageUrl = data.image.large || data.image.small || data.image.thumb;
+          console.log('✅ Found image from CoinGecko:', imageUrl);
+          return imageUrl;
+        }
+      }
+    } catch (error) {
+      console.log('❌ CoinGecko failed:', (error as Error).message);
+    }
+    
+    // Try Moralis API for ETH tokens
+    try {
+      const moralisUrl = `https://deep-index.moralis.io/api/v2.2/token-metadata?chain=eth&addresses[]=${address}`;
+      console.log('🔄 Trying Moralis for ETH token:', moralisUrl);
+      
+      const response = await fetch(moralisUrl, {
+        headers: {
+          'X-API-Key': process.env.NEXT_PUBLIC_MORALIS_API_KEY || '',
+        },
+        signal: AbortSignal.timeout(5000)
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data[0]?.logo) {
+          console.log('✅ Found image from Moralis:', data[0].logo);
+          return data[0].logo;
+        }
+      }
+    } catch (error) {
+      console.log('❌ Moralis failed:', (error as Error).message);
+    }
+    
+    console.log('❌ No ETH token images found for address:', address);
+    return null;
+  }, []);
+
   // Handle copying contract address
   const handleCopyContractAddress = useCallback(async (mintAddress: string) => {
     try {
@@ -491,6 +549,10 @@ export default function PublicPortfolioView() {
             console.log('🖼️ Fetching BNB token image for address:', mint);
             logoURI = await fetchBNBTokenImage(mint);
             console.log('🖼️ BNB token image result:', logoURI);
+          } else if (isValidETHAddress(mint)) {
+            console.log('🖼️ Fetching ETH token image for address:', mint);
+            logoURI = await fetchETHTokenImage(mint);
+            console.log('🖼️ ETH token image result:', logoURI);
           }
           
           console.log('🖼️ Individual image result for', mint, ':', logoURI);

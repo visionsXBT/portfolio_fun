@@ -30,14 +30,20 @@ function isValidBNBAddress(value: string): boolean {
   return bnbAddressRegex.test(value);
 }
 
+function isValidETHAddress(value: string): boolean {
+  // Ethereum uses 0x format, 42 characters (same as BSC but we'll differentiate by context)
+  const ethAddressRegex = /^0x[a-fA-F0-9]{40}$/;
+  return ethAddressRegex.test(value);
+}
+
 function extractMintFromInput(raw: string): string | null {
   const trimmed = raw.trim();
   
   // Check if it's a valid Solana mint
   if (isValidMint(trimmed)) return trimmed;
   
-  // Check if it's a valid BNB address
-  if (isValidBNBAddress(trimmed)) return trimmed;
+  // Check if it's a valid ETH/BNB address (both use 0x format)
+  if (isValidETHAddress(trimmed)) return trimmed;
   
   // Try to extract Solana mint from text
   const base58Re = /[1-9A-HJ-NP-Za-km-z]{32,48}/g;
@@ -82,6 +88,7 @@ interface UserData {
   accountType: 'email' | 'wallet';
   createdAt: string;
   profilePicture?: string;
+  displayName?: string;
   portfolios: Portfolio[];
 }
 
@@ -100,7 +107,7 @@ export default function UsernamePage() {
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [selectedPortfolioForShare, setSelectedPortfolioForShare] = useState<Portfolio | null>(null);
-  const [currentUserSession, setCurrentUserSession] = useState<{ username: string; userId: string; sessionToken: string; profilePicture?: string } | null>(null);
+  const [currentUserSession, setCurrentUserSession] = useState<{ username: string; userId: string; sessionToken: string; profilePicture?: string; displayName?: string; accountType?: string; usernameSet?: boolean } | null>(null);
   const [editingPortfolioId, setEditingPortfolioId] = useState<string | null>(null);
   const [editingPortfolioName, setEditingPortfolioName] = useState<string>('');
   const [portfolioInputs, setPortfolioInputs] = useState<Record<string, string>>({});
@@ -173,7 +180,6 @@ export default function UsernamePage() {
           portfolios: userData?.portfolios.filter(p => p.id !== portfolioId) || []
         })
       });
-      console.log('✅ Portfolio deleted from database');
     } catch (error) {
       console.error('❌ Failed to delete portfolio:', error);
       // Revert local state on error
@@ -224,7 +230,6 @@ export default function UsernamePage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ portfolios: updatedPortfolios })
         });
-        console.log('✅ Portfolio created in database');
       } catch (error) {
         console.error('❌ Failed to create portfolio in database:', error);
       }
@@ -288,7 +293,6 @@ export default function UsernamePage() {
       });
 
       if (response.ok) {
-        console.log('✅ Token removed from portfolio');
       }
     } catch (error) {
       console.error('Failed to remove token:', error);
@@ -298,13 +302,11 @@ export default function UsernamePage() {
 
   // Fetch pump.fun images for tokens
   const fetchPumpFunImages = useCallback(async (mint: string): Promise<string | null> => {
-    console.log('🔍 Trying image sources for Solana token:', mint);
     
     // For pump tokens, try pump.fun first, then IPFS, then DexScreener
     if (mint.toLowerCase().includes('pump')) {
       // 1. Try pump.fun direct image
       const pumpUrl = `https://images.pump.fun/coin-image/${mint}?variant=600x600`;
-      console.log('🔍 Testing pump.fun URL for pump token:', pumpUrl);
       
       try {
         const controller = new AbortController();
@@ -318,18 +320,14 @@ export default function UsernamePage() {
         clearTimeout(timeoutId);
         
         if (response.ok) {
-          console.log('✅ Found specific image from pump.fun URL:', pumpUrl);
           return pumpUrl;
         } else {
-          console.log('❌ No specific pump.fun image found, trying IPFS');
         }
       } catch (error) {
-        console.log('❌ Pump.fun URL failed, trying IPFS:', (error as Error).message);
       }
       
       // 2. Try IPFS scraping for pump tokens
       try {
-        console.log('🔍 Trying IPFS scraping for pump token...');
         const ipfsUrl = `https://ipfs.io/ipfs/${mint}`;
         const response = await fetch(ipfsUrl, { 
           method: 'HEAD',
@@ -440,6 +438,52 @@ export default function UsernamePage() {
     }
   }, []);
 
+  // Fetch ETH token data from CoinGecko
+  const fetchETHTokenData = useCallback(async (address: string): Promise<{ name?: string; symbol?: string; logoURI?: string; price?: number; priceChange24h?: number; marketCap?: number } | null> => {
+    console.log('🔍 Fetching ETH token data from CoinGecko for address:', address);
+    
+    try {
+      const response = await fetch(`https://api.coingecko.com/api/v3/coins/ethereum/contract/${address.toLowerCase()}`, {
+        signal: AbortSignal.timeout(10000)
+      });
+
+      if (!response.ok) {
+        console.log('❌ CoinGecko API request failed:', response.status, response.statusText);
+        return null;
+      }
+
+      const data = await response.json();
+      
+      if (!data || !data.id) {
+        console.log('❌ No data found for ETH token:', address);
+        return null;
+      }
+
+      // Extract price data
+      const currentPrice = data.market_data?.current_price?.usd || 0;
+      const priceChange24h = data.market_data?.price_change_percentage_24h || 0;
+      const marketCap = data.market_data?.market_cap?.usd || 0;
+
+      // Get token image from CoinGecko
+      const logoURI = data.image?.large || data.image?.small || data.image?.thumb;
+
+      const result = {
+        name: data.name || 'Unknown Token',
+        symbol: data.symbol?.toUpperCase() || 'UNKNOWN',
+        logoURI: logoURI,
+        price: currentPrice,
+        priceChange24h: priceChange24h,
+        marketCap: marketCap
+      };
+
+      console.log('✅ ETH token data fetched from CoinGecko:', result);
+      return result;
+    } catch (error) {
+      console.log('❌ ETH token fetch error:', error);
+      return null;
+    }
+  }, []);
+
   // Handle adding tokens to portfolios (same logic as builder page)
   const handleAddToken = useCallback(async (portfolioId: string) => {
     const inputValue = portfolioInputs[portfolioId] || "";
@@ -484,6 +528,19 @@ export default function UsernamePage() {
       } catch (error) {
         console.warn('❌ Failed to fetch BSC token data:', error);
       }
+    } else if (isValidETHAddress(mint)) {
+      console.log('🔍 ETH token detected, fetching data from CoinGecko...');
+      try {
+        const ethData = await fetchETHTokenData(mint);
+        if (ethData) {
+          setExtraMeta(prev => ({
+            ...prev,
+            [mint]: ethData
+          }));
+        }
+      } catch (error) {
+        console.warn('❌ Failed to fetch ETH token data:', error);
+      }
     } else if (isSolanaPumpToken(mint)) {
       console.log('🔍 Solana pump token detected, fetching image...');
       try {
@@ -516,7 +573,7 @@ export default function UsernamePage() {
     } catch (error) {
       console.error('Failed to add token:', error);
     }
-  }, [portfolioInputs, currentUserSession, userData, fetchBSCTokenData, fetchPumpFunImages]);
+  }, [portfolioInputs, currentUserSession, userData, fetchBSCTokenData, fetchETHTokenData, fetchPumpFunImages]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -558,7 +615,10 @@ export default function UsernamePage() {
               username: result.user.username,
               userId: result.user.id,
               sessionToken: 'database-session', // Placeholder since we don't store tokens client-side
-              profilePicture: result.user.profilePicture
+              profilePicture: result.user.profilePicture,
+              displayName: result.user.displayName,
+              accountType: result.user.accountType,
+              usernameSet: result.user.usernameSet
             });
           }
         }
@@ -569,6 +629,48 @@ export default function UsernamePage() {
 
     checkUserSession();
   }, []);
+
+  // Refresh session data when page becomes visible (e.g., when returning from settings)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Page became visible, refresh session data and user data
+        const refreshData = async () => {
+          try {
+            // Refresh session data
+            const sessionResponse = await fetch('/api/session');
+            if (sessionResponse.ok) {
+              const sessionResult = await sessionResponse.json();
+              if (sessionResult.success) {
+                setCurrentUserSession({
+                  username: sessionResult.user.username,
+                  userId: sessionResult.user.id,
+                  sessionToken: 'database-session',
+                  profilePicture: sessionResult.user.profilePicture,
+                  displayName: sessionResult.user.displayName,
+                  accountType: sessionResult.user.accountType,
+                  usernameSet: sessionResult.user.usernameSet
+                });
+              }
+            }
+
+            // Refresh user data
+            const userResponse = await fetch(`/api/user-by-username?username=${encodeURIComponent(username)}`);
+            const userResult = await userResponse.json();
+            if (userResult.success) {
+              setUserData(userResult.user);
+            }
+          } catch (error) {
+            console.error('Error refreshing data:', error);
+          }
+        };
+        refreshData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [username]);
 
   // Fetch token metadata and prices
   useEffect(() => {
@@ -697,6 +799,22 @@ export default function UsernamePage() {
               console.warn('❌ Failed to fetch BSC token data:', mint, error);
             }
           }
+        } else if (isValidETHAddress(mint)) {
+          // For ETH tokens, fetch complete data from CoinGecko
+          if (!extraMeta[mint]?.name && !tokenMeta[mint]?.name) {
+            try {
+              console.log('🔍 ETH token detected in useEffect, fetching data from CoinGecko...');
+              const ethData = await fetchETHTokenData(mint);
+              if (ethData) {
+                setExtraMeta(prev => ({
+                  ...prev,
+                  [mint]: ethData
+                }));
+              }
+            } catch (error) {
+              console.warn('❌ Failed to fetch ETH token data:', mint, error);
+            }
+          }
         } else if (isSolanaPumpToken(mint)) {
           // For Solana pump tokens, fetch image only
           if (!extraMeta[mint]?.logoURI && !tokenMeta[mint]?.logoURI) {
@@ -725,7 +843,7 @@ export default function UsernamePage() {
     return () => {
       controller.abort();
     };
-  }, [userData?.portfolios, tokenMeta, extraMeta, fetchPumpFunImages, fetchBSCTokenData, priceChanges24h, marketCaps]);
+  }, [userData?.portfolios, tokenMeta, extraMeta, fetchPumpFunImages, fetchBSCTokenData, fetchETHTokenData, priceChanges24h, marketCaps]);
 
   // Calculate portfolio stats
   const portfolioStats = useMemo(() => {
@@ -785,6 +903,7 @@ export default function UsernamePage() {
         username={username} 
         profilePicture={userData?.profilePicture}
         isCurrentUser={currentUserSession?.username === username}
+        displayName={userData?.displayName}
       />
       
             {/* Main Content */}
@@ -875,7 +994,9 @@ export default function UsernamePage() {
                 </div>
               )}
               <div className="min-w-0">
-                <h2 className="text-xl font-semibold text-white truncate">{username}</h2>
+                <h2 className="text-xl font-semibold text-white truncate">
+                  {userData?.displayName || username}
+                </h2>
                 <p className="text-white/60">Portfolio Creator</p>
                 <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-white/60">
                   <span>{userData?.portfolios?.length || 0} portfolios</span>

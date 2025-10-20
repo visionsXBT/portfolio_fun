@@ -15,11 +15,13 @@ export interface Portfolio {
 
 export interface UserAccount {
   _id?: string | ObjectId;
-  username?: string; // Optional for wallet-only accounts
+  username?: string; // For email accounts and wallet display names
   passwordHash?: string; // Optional for wallet-only accounts
   walletAddress?: string; // For Privy wallet accounts
   privyUserId?: string; // Privy user ID
   accountType: 'email' | 'wallet'; // Track account type
+  displayName?: string; // Display name for wallet users (can be changed)
+  usernameSet?: boolean; // Track if wallet user has set their display name
   createdAt: string;
   portfolios: Portfolio[];
 }

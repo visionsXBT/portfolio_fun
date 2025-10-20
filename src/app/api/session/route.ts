@@ -127,7 +127,11 @@ export async function GET(request: NextRequest) {
         id: user._id,
         username: user.username,
         accountType: user.accountType,
-        profilePicture: user.profilePicture
+        profilePicture: user.profilePicture,
+        walletAddress: user.walletAddress,
+        usernameSet: user.usernameSet,
+        displayName: user.displayName,
+        email: user.email
       }
     });
 

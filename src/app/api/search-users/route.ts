@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
     const searchResults = users.map(user => ({
       id: user._id.toString(),
       username: user.username,
+      displayName: user.displayName,
       profilePicture: user.profilePicture,
       portfolioCount: user.portfolios ? user.portfolios.length : 0,
       createdAt: user.createdAt

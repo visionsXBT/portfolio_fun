@@ -7,6 +7,7 @@ import Image from 'next/image';
 interface SearchUser {
   id: string;
   username: string;
+  displayName?: string;
   profilePicture?: string;
   portfolioCount: number;
   createdAt: string;
@@ -216,7 +217,7 @@ export default function UserSearchBar({ className = "" }: UserSearchBarProps) {
 
                   {/* User Info */}
                   <div className="flex-1 text-left">
-                    <div className="text-white font-medium">{user.username}</div>
+                    <div className="text-white font-medium">{user.displayName || user.username}</div>
                     <div className="text-white/60 text-sm">
                       {user.portfolioCount} portfolio{user.portfolioCount !== 1 ? 's' : ''}
                     </div>

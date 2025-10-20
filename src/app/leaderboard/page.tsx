@@ -70,6 +70,12 @@ export default function LeaderboardPage() {
     return bnbAddressRegex.test(value);
   }
 
+  function isValidETHAddress(value: string): boolean {
+    // Ethereum uses 0x format, 42 characters (same as BSC but we'll differentiate by context)
+    const ethAddressRegex = /^0x[a-fA-F0-9]{40}$/;
+    return ethAddressRegex.test(value);
+  }
+
 
   // Load user account from database session
   useEffect(() => {
@@ -81,14 +87,11 @@ export default function LeaderboardPage() {
         if (sessionResponse.ok) {
           const sessionData = await sessionResponse.json();
           if (sessionData.success) {
-            console.log('👤 Found user session, loading user data:', sessionData.user);
             setUserAccount(sessionData.user);
           } else {
-            console.log('👤 No valid session found');
             setUserAccount(null);
           }
         } else {
-          console.log('👤 No session found');
           setUserAccount(null);
         }
       } catch (error) {
@@ -137,12 +140,10 @@ export default function LeaderboardPage() {
 
   // Dedicated function for pump.fun image fetching (copied from BuilderPageContent)
   const fetchPumpFunImages = useCallback(async (mint: string): Promise<string | null> => {
-    console.log('🔍 Trying image sources for Solana token:', mint);
     
     // For pump tokens, try pump.fun first, then DexScreener for tokens without specific images
     if (mint.toLowerCase().includes('pump')) {
       const pumpUrl = `https://images.pump.fun/coin-image/${mint}?variant=600x600`;
-      console.log('🔍 Testing pump.fun URL for pump token:', pumpUrl);
       
       try {
         const controller = new AbortController();
@@ -156,17 +157,13 @@ export default function LeaderboardPage() {
         clearTimeout(timeoutId);
         
         if (response.ok) {
-          console.log('✅ Found specific image from pump.fun URL:', pumpUrl);
           return pumpUrl;
         } else {
-          console.log('❌ No specific pump.fun image found, trying DexScreener');
         }
       } catch (error) {
-        console.log('❌ Pump.fun URL failed, trying DexScreener:', (error as Error).message);
       }
       
       // Fall back to DexScreener for pump tokens without specific images
-      console.log('🔍 Trying DexScreener for pump token without specific image');
       // Continue to DexScreener logic below
     }
     
@@ -174,16 +171,13 @@ export default function LeaderboardPage() {
     try {
       // Try direct DexScreener image URL first (most reliable)
       const directDexScreenerUrl = `https://dd.dexscreener.com/ds-data/tokens/solana/${mint}.png?key=2d2e69`;
-      console.log('✅ Returning direct DexScreener URL (will be proxied):', directDexScreenerUrl);
       return directDexScreenerUrl;
     } catch (error) {
-      console.log('❌ Direct DexScreener URL failed:', (error as Error).message);
     }
     
     // Try DexScreener API for image data
     try {
       const dexScreenerUrl = `https://api.dexscreener.com/latest/dex/tokens/${mint}`;
-      console.log('🔍 Trying DexScreener API for Solana token image:', dexScreenerUrl);
       
       const response = await fetch(dexScreenerUrl, {
         signal: AbortSignal.timeout(5000)
@@ -277,6 +271,35 @@ export default function LeaderboardPage() {
     return null;
   }, []);
 
+  // Function to fetch ETH token images
+  const fetchETHTokenImage = useCallback(async (address: string): Promise<string | null> => {
+    console.log('🔍 Trying ETH token image sources for address:', address);
+    
+    // Try CoinGecko API for Ethereum tokens first
+    try {
+      const coinGeckoUrl = `https://api.coingecko.com/api/v3/coins/ethereum/contract/${address.toLowerCase()}`;
+      console.log('🔄 Trying CoinGecko for ETH token:', coinGeckoUrl);
+      
+      const response = await fetch(coinGeckoUrl, {
+        signal: AbortSignal.timeout(5000)
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.image?.large || data.image?.small || data.image?.thumb) {
+          const imageUrl = data.image.large || data.image.small || data.image.thumb;
+          console.log('✅ Found image from CoinGecko:', imageUrl);
+          return imageUrl;
+        }
+      }
+    } catch (error) {
+      console.log('❌ CoinGecko failed:', (error as Error).message);
+    }
+    
+    console.log('❌ No ETH token images found for address:', address);
+    return null;
+  }, []);
+
   const fetchTokenMetadata = async (mints: string[]) => {
     try {
       // First get basic metadata from DexScreener
@@ -307,6 +330,8 @@ export default function LeaderboardPage() {
               logoURI = await fetchPumpFunImages(mint);
             } else if (isValidBNBAddress(mint)) {
               logoURI = await fetchBNBTokenImage(mint);
+            } else if (isValidETHAddress(mint)) {
+              logoURI = await fetchETHTokenImage(mint);
             }
             
             if (logoURI) {

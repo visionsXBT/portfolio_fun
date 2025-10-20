@@ -21,23 +21,19 @@ export default function Home() {
   useEffect(() => {
     const checkUserSession = async () => {
       try {
-        console.log('🔍 Checking user session on landing page...');
         const sessionResponse = await fetch('/api/session');
         
         if (sessionResponse.ok) {
           const sessionData = await sessionResponse.json();
           if (sessionData.success && sessionData.user?.username) {
-            console.log('✅ User is logged in, redirecting to profile:', sessionData.user.username);
             // Redirect to user's profile page
             router.push(`/${sessionData.user.username}`);
             return;
           }
         }
         
-        console.log('👤 No valid session found, staying on landing page');
         setIsCheckingSession(false);
       } catch (error) {
-        console.error('❌ Failed to check user session:', error);
         setIsCheckingSession(false);
       }
     };
@@ -45,17 +41,10 @@ export default function Home() {
     // Warm up database connection and check session
     const initializePage = async () => {
       try {
-        console.log('🔥 Starting database warmup from landing page...');
         const response = await fetch('/api/warmup-db');
         const result = await response.json();
-        
-        if (result.success) {
-          console.log('✅ Database connection warmed up successfully');
-        } else {
-          console.warn('⚠️ Database warmup failed:', result.error);
-        }
       } catch (error) {
-        console.warn('⚠️ Database warmup request failed:', error);
+        // Silent fail
       }
 
       // Check user session after database warmup
@@ -140,7 +129,7 @@ export default function Home() {
             onSuccess={(username, userId) => {
               setShowSignInModal(false);
               // Redirect to user's profile page after successful sign in
-              router.push(`/${username}`);
+              window.location.href = `/${username}`;
             }}
             onSwitchToSignUp={() => {
               setShowSignInModal(false);
@@ -158,7 +147,7 @@ export default function Home() {
             onSuccess={(username, userId) => {
               setShowAccountModal(false);
               // Redirect to user's profile page after successful account creation
-              router.push(`/${username}`);
+              window.location.href = `/${username}`;
             }}
             onSwitchToSignIn={() => {
               setShowAccountModal(false);
