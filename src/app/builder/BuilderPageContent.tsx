@@ -1,5 +1,9 @@
 "use client";
 
+// TODO: Fix Privy provider initialization error during build
+// Error: Cannot initialize the Privy provider with an invalid Privy app ID
+// Need to either remove Privy completely or fix the app ID configuration
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";

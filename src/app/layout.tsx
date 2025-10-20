@@ -73,6 +73,9 @@ export default function RootLayout({
         />
       </head>
       <ClientBody className={`${golosText.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}>
+        {/* TODO: Fix Privy provider initialization error during build */}
+        {/* Error: Cannot initialize the Privy provider with an invalid Privy app ID */}
+        {/* Need to either remove Privy completely or fix the app ID configuration */}
         <PrivyProvider>
           <PageTransition>
             {children}
