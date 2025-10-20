@@ -94,7 +94,7 @@ export default function NavigationBar({ username, profilePicture, isCurrentUser 
                   className="w-full h-full object-cover"
                 />
               </div>
-              <div className="text-center">
+              <div className="text-left">
                 <div className="text-white font-medium text-lg">
                   {username}
                 </div>
