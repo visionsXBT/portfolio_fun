@@ -77,8 +77,8 @@ export default function RootLayout({
           <PrivyProvider>
             <PageTransition>
               {children}
-              <BottomBar />
             </PageTransition>
+            <BottomBar />
           </PrivyProvider>
       </ClientBody>
     </html>

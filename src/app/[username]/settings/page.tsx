@@ -344,15 +344,15 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen flex" style={{ fontFamily: 'Golos Text, sans-serif' }}>
+    <div className="h-screen overflow-hidden flex" style={{ fontFamily: 'Golos Text, sans-serif' }}>
       {/* Navigation Bar */}
       <div className={`
         fixed left-0 top-0 h-screen w-80 glassmorphism z-40 border-r border-[#b8bdbf]
         transform transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0 lg:static lg:h-auto lg:w-64 lg:bg-transparent lg:backdrop-blur-none lg:border-r-0
+        lg:translate-x-0 lg:static lg:h-screen lg:w-64 lg:bg-transparent lg:backdrop-blur-none lg:border-r-0
       `} style={{ borderRight: '1px solid rgba(107, 114, 128, 0.5)' }}>
-        <div className="flex flex-col h-screen p-2 pb-16 pt-16 lg:pt-2">
+        <div className="flex flex-col h-screen p-2 pt-16 lg:h-screen lg:pt-2">
           {/* Logo Section */}
           <div className="flex flex-col items-start gap-2 mb-6">
             <Link href="/" className="w-40 h-20 hover:opacity-80 transition-opacity">
@@ -440,7 +440,7 @@ export default function SettingsPage() {
       )}
 
             {/* Main Content */}
-            <div className="flex-1 lg:ml-12 lg:pl-2 p-4 sm:p-6 md:p-8 pb-16 pt-16 lg:pt-8">
+            <div className="flex-1 lg:ml-12 lg:pl-2 p-4 sm:p-6 md:p-8 pb-40 pt-16 lg:pt-8 overflow-y-auto">
         <div className="w-full">
           {/* Header */}
           <div className="mb-4">
@@ -595,7 +595,7 @@ export default function SettingsPage() {
 
             {/* Change Password (Email Users Only) */}
             {currentUserSession.accountType === 'email' && (
-              <div className="glassmorphism p-6">
+              <div className="glassmorphism p-6 mb-20">
                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Change Password</h2>
               <form onSubmit={handlePasswordChange} className="space-y-4">
                 <div>
@@ -664,13 +664,13 @@ export default function SettingsPage() {
       </div>
 
       {/* Fixed Sign Out Button - positioned above terminal */}
-      <div className="fixed bottom-20 left-4 z-40">
+      <div className="fixed bottom-20 left-4 z-40 w-56">
         <button
           onClick={() => {
             console.log('🔴 Sign out button clicked!');
             handleLogout();
           }}
-          className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors glassmorphism border border-red-500/20"
+          className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors glassmorphism border border-red-500/20 w-full"
         >
           <FontAwesomeIcon icon={faSignOutAlt} className="w-5 h-5" />
           <span className="font-medium">Sign Out</span>

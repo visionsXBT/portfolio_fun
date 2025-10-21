@@ -43,12 +43,22 @@ body {
 
 /* Disable text selection and right-click on all elements */
 * {
-  user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
-  -webkit-touch-callout: none;
-  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* Prevent scrolling beyond footer terminal */
+.no-scroll-beyond-footer {
+  max-height: calc(100vh - 5rem);
+  overflow-y: auto;
+}
+
+/* Prevent page scrolling beyond footer terminal */
+.prevent-page-scroll-beyond-footer {
+  height: calc(100vh - 5rem);
+  overflow-y: auto;
 }
 
 /* Enable copy/paste functionality ONLY in authentication modals */

@@ -480,7 +480,7 @@ export default function LeaderboardPage() {
   }, [activeTab]); // Removed currentTab from dependencies to prevent infinite loop
 
   return (
-    <div className="min-h-screen p-6 sm:p-8 md:p-12 pb-24" style={{ fontFamily: 'Golos Text, sans-serif' }}>
+    <div className="min-h-screen p-6 sm:p-8 md:p-12 pb-32" style={{ fontFamily: 'Golos Text, sans-serif' }}>
       <div className="mx-auto w-full max-w-6xl">
         {/* Header with Logo */}
         <div className="mb-8">
