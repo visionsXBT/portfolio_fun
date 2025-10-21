@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrophy, faUser, faCog, faSignOutAlt, faBars, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { useLogout, useWallets } from '@privy-io/react-auth';
+import { Just_Another_Hand } from 'next/font/google';
 
 interface NavigationBarProps {
   username: string;
@@ -62,14 +63,14 @@ export default function NavigationBar({ username, profilePicture, isCurrentUser 
       });
     }
     
-    // Logout from Privy - COMMENTED OUT (causing issues)
-    // try {
-    //   console.log('🔴 Logging out from Privy...');
-    //   await logout();
-    //   console.log('✅ Logged out from Privy');
-    // } catch (error) {
-    //   console.error('❌ Error logging out from Privy:', error);
-    // }
+    // Logout from Privy
+    try {
+      console.log('🔴 Logging out from Privy...');
+      await logout();
+      console.log('✅ Logged out from Privy');
+    } catch (error) {
+      console.error('❌ Error logging out from Privy:', error);
+    }
     
     // Add a small delay to ensure everything is cleared
     console.log('🔴 Waiting 500ms before refresh...');
@@ -105,7 +106,7 @@ export default function NavigationBar({ username, profilePicture, isCurrentUser 
       {/* Mobile Menu Button - Always Visible */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-2 text-white"
+        className="lg:hidden fixed top-4 left-4 z-50 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-2 text-gray-800"
         style={{ fontFamily: 'Golos Text, sans-serif' }}
       >
         <FontAwesomeIcon icon={isOpen ? faTimes : faBars} />
@@ -113,14 +114,14 @@ export default function NavigationBar({ username, profilePicture, isCurrentUser 
 
       {/* Navigation Bar */}
       <div className={`
-        fixed left-0 top-0 h-screen w-48 bg-white/5 backdrop-blur-md border-r border-white/10 z-40
+        fixed left-0 top-0 h-screen w-80 bg-white/5 backdrop-blur-md glassmorphism border-r border-white/10 z-40
         transform transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0 lg:static lg:h-auto lg:w-auto lg:bg-transparent lg:backdrop-blur-none lg:border-r-0
+        lg:translate-x-0 lg:static lg:h-auto lg:w-64 lg:bg-transparent lg:backdrop-blur-none
       `}>
-        <div className="flex flex-col h-screen p-4 pb-16 pt-16 lg:pt-4" style={{ fontFamily: 'Golos Text, sans-serif' }}>
+        <div className="flex flex-col h-screen p-2 pb-16 pt-16 lg:pt-2" style={{ fontFamily: 'Golos Text, sans-serif' }}>
           {/* Logo Section */}
-          <div className="flex flex-col items-center gap-2 mb-6">
+          <div className="flex flex-col items-start gap-2 mb-6">
             <Link href="/" className="w-40 h-20 hover:opacity-80 transition-opacity">
               <Image
                 src="/logo.png"
@@ -130,7 +131,7 @@ export default function NavigationBar({ username, profilePicture, isCurrentUser 
                 className="w-full h-full object-contain"
               />
             </Link>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 justify-left">
               <div className="w-12 h-12 rounded-full border border-white/20 overflow-hidden">
                 {profilePicture ? (
                   <Image
@@ -141,16 +142,16 @@ export default function NavigationBar({ username, profilePicture, isCurrentUser 
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-[var(--brand-start)] to-[var(--brand-end)] flex items-center justify-center text-white font-bold text-lg">
+                  <div className="w-full h-full bg-gradient-to-br from-[var(--brand-start)] to-[var(--brand-end)] flex items-center justify-center text-gray-800 font-bold text-lg">
                     {username.charAt(0).toUpperCase()}
                   </div>
                 )}
               </div>
               <div className="text-left">
-                <div className="text-white font-medium text-lg">
+                <div className="text-gray-800 font-medium text-lg">
                   {displayName || username}
                 </div>
-                <div className="text-white/60 text-sm">
+                <div className="text-gray-800/60 text-sm">
                   Portfolio Creator
                 </div>
               </div>
@@ -166,7 +167,7 @@ export default function NavigationBar({ username, profilePicture, isCurrentUser 
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg border border-[#b8bdbf] hover:text-gray-800 hover:bg-[#d7dadb]/60 text-gray-800/80 hover:text-gray-800 transition-colors drop-shadow-md"
                   onClick={() => setIsOpen(false)}
                 >
                   <FontAwesomeIcon icon={item.icon} className="w-5 h-5" />
@@ -184,7 +185,7 @@ export default function NavigationBar({ username, profilePicture, isCurrentUser 
             <div className="pt-4 border-t border-white/10">
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors w-full"
+                className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 border border-[#b8bdbf] bg-[#d7dadb] hover:text-red-300 hover:bg-red-500/10 transition-colors w-full"
               >
                 <FontAwesomeIcon icon={faSignOutAlt} className="w-5 h-5" />
                 <span className="font-medium">Sign Out</span>

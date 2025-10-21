@@ -874,7 +874,7 @@ export default function UsernamePage() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-white">Loading...</div>
+        <div className="text-gray-800">Loading...</div>
       </div>
     );
   }
@@ -883,8 +883,8 @@ export default function UsernamePage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">User Not Found</h1>
-          <p className="text-white/60 mb-6">The user profile you&apos;re looking for doesn&apos;t exist.</p>
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">User Not Found</h1>
+          <p className="text-gray-800/60 mb-6">The user profile you&apos;re looking for doesn&apos;t exist.</p>
           <button
             onClick={() => router.push('/profile')}
             className="rounded-lg gradient-button px-6 py-3 text-white"
@@ -907,13 +907,13 @@ export default function UsernamePage() {
       />
       
             {/* Main Content */}
-            <div className="flex-1 lg:ml-48 lg:pl-0 p-4 sm:p-6 md:p-8 pb-16 pt-16 lg:pt-8">
+            <div className="flex-1 lg:ml-12 lg:pl-2 p-4 sm:p-6 md:p-8 pb-16 pt-16 lg:pt-8">
         <div className="w-full">
                 {/* Header */}
                 <div className="mb-4">
                   <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-4">
                     {/* Search Bar */}
-                    <div className="w-full sm:flex-1 sm:max-w-md order-2 sm:order-1">
+                    <div className="w-full sm:flex-1 sm:max-w-2xl order-2 sm:order-1">
                       <UserSearchBar />
                     </div>
                     
@@ -924,7 +924,7 @@ export default function UsernamePage() {
                           href={`/${currentUserSession.username}`}
                           className="inline-flex items-center gap-3 rounded-lg gradient-button px-4 py-2 text-sm text-white transition-colors"
                         >
-                          <div className="w-6 h-6 rounded-full border border-white/20 overflow-hidden">
+                          <div className="w-6 h-6 rounded-full border border-[#b8bdbf] overflow-hidden">
                             <Image
                               src={currentUserSession.profilePicture || '/placeholder-token.svg?v=2'}
                               alt={currentUserSession.username}
@@ -940,7 +940,7 @@ export default function UsernamePage() {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => setShowSignInModal(true)}
-                            className="rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 px-4 py-2 text-sm text-white transition-colors"
+                            className="rounded-lg border border-[#b8bdbf] bg-[#d7dadb]/60 hover:bg-[#d7dadb]/80 px-4 py-2 text-sm text-gray-800 transition-colors"
                           >
                             Sign In
                           </button>
@@ -954,10 +954,10 @@ export default function UsernamePage() {
                       )}
                     </div>
                   </div>
-          <h1 className="text-2xl font-semibold mb-1">
+          <h1 className="text-2xl font-semibold mb-1 drop-shadow-lg">
             {currentUserSession && currentUserSession.username === username ? 'My Portfolios' : `${username}'s Portfolios`}
           </h1>
-          <p className="text-white/60 text-sm">
+          <p className="text-gray-800/60 text-sm drop-shadow-md">
             {currentUserSession && currentUserSession.username === username 
               ? 'Manage and edit your portfolios below. Click on any portfolio to edit it.'
               : `Viewing all portfolios by ${username}. Sign in to create and edit your own portfolios.`
@@ -966,7 +966,7 @@ export default function UsernamePage() {
         </div>
 
         {/* User Profile Section */}
-        <div className="mb-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-4">
+        <div className="mb-4 glassmorphism p-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
               {currentUserSession && currentUserSession.username === username ? (
@@ -987,18 +987,18 @@ export default function UsernamePage() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-r from-[var(--brand-start)] to-[var(--brand-end)] flex items-center justify-center text-white font-bold text-xl">
+                    <div className="w-full h-full bg-gradient-to-r from-[var(--brand-start)] to-[var(--brand-end)] flex items-center justify-center text-gray-800 font-bold text-xl">
                       {username.charAt(0).toUpperCase()}
                     </div>
                   )}
                 </div>
               )}
               <div className="min-w-0">
-                <h2 className="text-xl font-semibold text-white truncate">
+                <h2 className="text-xl font-semibold text-gray-800 truncate">
                   {userData?.displayName || username}
                 </h2>
-                <p className="text-white/60">Portfolio Creator</p>
-                <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-white/60">
+                <p className="text-gray-800/60">Portfolio Creator</p>
+                <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-800/60">
                   <span>{userData?.portfolios?.length || 0} portfolios</span>
                   <span>{userData?.portfolios?.reduce((total, p) => total + p.rows.length, 0) || 0} tokens</span>
                   <span className="text-green-400">Active</span>
@@ -1008,7 +1008,7 @@ export default function UsernamePage() {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <Link
                 href="/leaderboard"
-                className="rounded-md border border-white/20 bg-white/5 hover:bg-white/10 px-4 py-2 text-sm text-white transition-colors text-center w-full sm:w-auto"
+                className="glassmorphism px-4 py-2 text-sm text-gray-800 transition-colors text-center w-full sm:w-auto"
               >
                 <FontAwesomeIcon icon={faTrophy} /> Leaderboard
               </Link>
@@ -1027,10 +1027,10 @@ export default function UsernamePage() {
         {!userData?.portfolios || userData?.portfolios?.length === 0 ? (
           <div className="text-center py-8">
             <div className="mb-4">
-              <h2 className="text-xl font-semibold text-white mb-2">
+              <h2 className="text-xl font-semibold text-gray-800 mb-2">
                 {currentUserSession && currentUserSession.username === username ? 'No portfolios yet' : 'No portfolios yet'}
               </h2>
-              <p className="text-white/60 mb-4 text-sm">
+              <p className="text-gray-800/60 mb-4 text-sm">
                 {currentUserSession && currentUserSession.username === username 
                   ? 'Create your first portfolio to get started!'
                   : `${username} hasn't created any portfolios yet.`
@@ -1065,7 +1065,7 @@ export default function UsernamePage() {
               return (
                 <div 
                   key={portfolio.id} 
-                  className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6"
+                  className="glassmorphism p-6"
                 >
                   {/* Portfolio Header */}
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
@@ -1077,7 +1077,7 @@ export default function UsernamePage() {
                               type="text"
                               value={editingPortfolioName}
                               onChange={(e) => setEditingPortfolioName(e.target.value)}
-                              className="bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-lg font-medium focus:outline-none focus:ring-2 focus:ring-white/30"
+                              className="bg-[#d7dadb]/80 border border-[#b8bdbf] rounded px-2 py-1 text-gray-800 text-lg font-medium focus:outline-none focus:ring-2 focus:ring-white/30"
                               autoFocus
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
@@ -1109,11 +1109,11 @@ export default function UsernamePage() {
                           </div>
                         ) : (
                           <div className="flex items-center gap-3">
-                            <h3 className="text-lg font-medium text-white">{portfolio.name}</h3>
+                            <h3 className="text-lg font-medium text-gray-800">{portfolio.name}</h3>
                             {currentUserSession && currentUserSession.username === username && (
                               <button
                                 onClick={() => handleEditPortfolio(portfolio)}
-                                className="text-white/40 hover:text-white/60 transition-colors"
+                                className="text-gray-800/40 hover:text-gray-800/60 transition-colors"
                                 title="Edit portfolio name"
                               >
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1126,7 +1126,7 @@ export default function UsernamePage() {
                         )}
                       </div>
                       
-                      <div className="flex items-center gap-4 text-sm text-white/60">
+                      <div className="flex items-center gap-4 text-sm text-gray-800/60">
                         <span>{portfolio.rows.length} tokens</span>
                         {stats && (
                           <>
@@ -1152,7 +1152,7 @@ export default function UsernamePage() {
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => handleSharePortfolio(portfolio)}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 text-white text-sm transition-colors"
+                        className="flex items-center gap-2 glassmorphism px-3 py-2 text-gray-800 text-sm transition-colors"
                         title="Share portfolio"
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1189,13 +1189,13 @@ export default function UsernamePage() {
                               <TokenImage
                                 src={meta?.logoURI || undefined}
                                 alt={meta?.symbol || "Token"}
-                                className="w-12 h-12 rounded-lg border border-white/20"
+                                className="w-12 h-12 rounded-lg border border-[#b8bdbf]"
                                 fallbackSrc="/placeholder-token.svg?v=2"
                               />
                               {currentUserSession && currentUserSession.username === username && (
                                 <button
                                   onClick={() => handleRemoveToken(portfolio.id, row.mint)}
-                                  className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                                  className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-gray-800 text-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                                 >
                                   -
                                 </button>
@@ -1204,7 +1204,7 @@ export default function UsernamePage() {
                           );
                         })}
                         {hiddenCount > 0 && (
-                          <div className="w-12 h-12 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-xs text-white/60">
+                          <div className="w-12 h-12 rounded-full bg-[#d7dadb]/80 border border-[#b8bdbf] flex items-center justify-center text-xs text-gray-800/60">
                             +{hiddenCount}
                           </div>
                         )}
@@ -1223,7 +1223,7 @@ export default function UsernamePage() {
                           onKeyDown={handleTokenInputKeyDown}
                           data-portfolio-id={portfolio.id}
                           placeholder="Paste Solana or BNB token contract address..."
-                          className="flex-1 rounded-md border border-white/20 bg-white/5 text-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
+                          className="flex-1 rounded-md border border-[#b8bdbf] bg-[#d7dadb]/60 text-gray-800 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
                         />
                         <button
                           onClick={() => handleAddToken(portfolio.id)}
@@ -1245,25 +1245,25 @@ export default function UsernamePage() {
                         const marketCap = meta?.marketCap || marketCaps[row.mint] || 0;
                         
                         return (
-                          <div key={row.mint} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-white/5 rounded-lg">
+                          <div key={row.mint} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 glassmorphism p-3">
                             <div className="flex items-center gap-3">
                               <TokenImage
                                 src={meta?.logoURI || undefined}
                                 alt={meta?.symbol || "Token"}
-                                className="w-12 h-12 rounded-lg border border-white/20"
+                                className="w-12 h-12 rounded-lg border border-[#b8bdbf]"
                                 fallbackSrc="/placeholder-token.svg?v=2"
                               />
                               <div className="min-w-0 flex-1">
-                                <div className="text-white font-medium truncate">
+                                <div className="text-gray-800 font-medium truncate">
                                   {meta?.symbol || "Unknown"}
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <div className="text-white/60 text-sm truncate">
+                                  <div className="text-gray-800/60 text-sm truncate">
                                     {row.mint.slice(0, 8)}...{row.mint.slice(-8)}
                                   </div>
                                   <button
                                     onClick={() => handleCopyContractAddress(row.mint)}
-                                    className="text-white/40 hover:text-white/60 transition-colors flex-shrink-0"
+                                    className="text-gray-800/40 hover:text-gray-800/60 transition-colors flex-shrink-0"
                                     title="Copy contract address"
                                   >
                                     <FontAwesomeIcon icon={faCopy} className="w-3 h-3" />
@@ -1280,7 +1280,7 @@ export default function UsernamePage() {
                                   {priceChange >= 0 ? "+" : ""}{priceChange.toFixed(2)}%
                                 </div>
                                 {marketCap > 0 && (
-                                  <div className="text-white/60 text-sm">
+                                  <div className="text-gray-800/60 text-sm">
                                     ${marketCap >= 1e9
                                       ? `${(marketCap / 1e9).toFixed(1)}B`
                                       : marketCap >= 1e6

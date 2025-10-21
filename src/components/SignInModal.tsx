@@ -1,8 +1,23 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useWallets, usePrivy, useLogin, useLogout, useConnectWallet } from '@privy-io/react-auth';
+import { useWallets, usePrivy, useLogin, useLogout, useLoginWithSiws } from '@privy-io/react-auth';
+import { useWallets as useSolanaWallets } from '@privy-io/react-auth/solana';
 import JumpingDots from './JumpingDots';
+
+// TypeScript declaration for Phantom wallet
+declare global {
+  interface Window {
+    solana?: {
+      isPhantom?: boolean;
+      publicKey?: {
+        toString: () => string;
+      };
+      connect?: () => Promise<any>;
+      signMessage?: (message: Uint8Array) => Promise<{ signature: Uint8Array }>;
+    };
+  }
+}
 
 interface SignInModalProps {
   isOpen: boolean;
@@ -19,163 +34,162 @@ export default function SignInModal({ isOpen, onClose, onSuccess, onSwitchToSign
   const [isWalletLoading, setIsWalletLoading] = useState(false);
 
   // Privy hooks
-  // const { generateSiweMessage, loginWithSiwe } = useLoginWithSiwe();
   const { wallets } = useWallets();
-  // const { authenticated, user, getAccessToken } = usePrivy(); // COMMENTED OUT (causing issues)
+  const { wallets: solanaWallets } = useSolanaWallets();
+  const { authenticated, user, getAccessToken, connectOrCreateWallet, connectWallet } = usePrivy();
   const { login } = useLogin();
   const { logout } = useLogout();
-  const { connectWallet } = useConnectWallet();
+  const { generateSiwsMessage, loginWithSiws } = useLoginWithSiws();
 
-  // Handle wallet authentication with our database - COMMENTED OUT (causing issues)
-  // const handleWalletAuthentication = useCallback(async () => {
-  //   if (!user) {
-  //     return;
-  //   }
+  // Handle wallet authentication with our database
+  const handleWalletAuthentication = useCallback(async () => {
+    if (!user) {
+      return;
+    }
 
-  //   // Get wallet address from user's linked accounts if wallets array is empty
-  //   let walletAddress;
-  //   if (wallets?.length > 0) {
-  //     walletAddress = wallets[0].address;
-  //   } else if (user.linkedAccounts && user.linkedAccounts.length > 0) {
-  //     // Find Solana wallet in linked accounts
-  //     const solanaAccount = user.linkedAccounts.find(account => 
-  //       account.type === 'wallet' && account.chainType === 'solana'
-  //     );
-  //     if (solanaAccount && 'address' in solanaAccount) {
-  //       walletAddress = solanaAccount.address;
-  //     }
-  //   }
+    // Get wallet address from user's linked accounts if wallets array is empty
+    let walletAddress;
+    if (wallets?.length > 0) {
+      walletAddress = wallets[0].address;
+    } else if (user.linkedAccounts && user.linkedAccounts.length > 0) {
+      // Find Solana wallet in linked accounts
+      const solanaAccount = user.linkedAccounts.find(account => 
+        account.type === 'wallet' && account.chainType === 'solana'
+      );
+      if (solanaAccount && 'address' in solanaAccount) {
+        walletAddress = solanaAccount.address;
+      }
+    }
 
-  //   if (!walletAddress) {
-  //     return;
-  //   }
+    if (!walletAddress) {
+      return;
+    }
 
-  //   try {
-  //     // Get access token from Privy - COMMENTED OUT (causing issues)
-  //     // const accessToken = await getAccessToken();
+    try {
+      // Get access token from Privy
+      const accessToken = await getAccessToken();
       
-  //     // Validate access token format
-  //     if (!accessToken || typeof accessToken !== 'string' || accessToken.length < 10) {
-  //       setError("Authentication failed: Invalid token format");
-  //       setIsWalletLoading(false);
-  //       return;
-  //     }
+      // Validate access token format
+      if (!accessToken || typeof accessToken !== 'string' || accessToken.length < 10) {
+        setError("Authentication failed: Invalid token format");
+        setIsWalletLoading(false);
+        return;
+      }
       
-  //     // Create or find user in our database
-  //     const response = await fetch('/api/auth', {
-  //       method: 'POST',
-  //       headers: { 
-  //         'Content-Type': 'application/json',
-  //         'Authorization': `Bearer ${accessToken}`
-  //       },
-  //       body: JSON.stringify({ 
-  //         action: 'wallet-auth',
-  //         walletAddress: walletAddress,
-  //         privyUserId: user.id
-  //       })
-  //     });
+      // Create or find user in our database
+      const response = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({ 
+          action: 'wallet-auth',
+          walletAddress: walletAddress,
+          privyUserId: user.id
+        })
+      });
 
-  //     // Check if response is JSON
-  //     const contentType = response.headers.get('content-type');
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
       
-  //     let data;
-  //     if (contentType && contentType.includes('application/json')) {
-  //       data = await response.json();
-  //     } else {
-  //       const text = await response.text();
-  //       throw new Error(`API returned non-JSON response: ${text}`);
-  //     }
+      let data;
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        throw new Error(`API returned non-JSON response: ${text}`);
+      }
       
-  //     if (data.success) {
-  //       onSuccess(data.user.username, data.user.id);
-  //       setError("");
-  //       // Close the modal after successful authentication
-  //       onClose();
-  //     } else {
-  //       setError(data.error || "Wallet authentication failed");
-  //     }
-  //   } catch (error) {
-  //     setError("Wallet authentication failed. Please try again.");
-  //   }
-  // }, [wallets, user, onSuccess, onClose, getAccessToken]);
+      if (data.success) {
+        onSuccess(data.user.username, data.user._id);
+        setError("");
+        // Close the modal after successful authentication
+        onClose();
+      } else {
+        setError(data.error || "Wallet authentication failed");
+      }
+    } catch (error) {
+      setError("Wallet authentication failed. Please try again.");
+    }
+  }, [wallets, user, onSuccess, onClose, getAccessToken]);
 
-  // Handle modal opening - reset any bad state - COMMENTED OUT (causing issues)
-  // useEffect(() => {
-  //   if (isOpen) {
-  //     // If we're in any authentication state, force a complete cleanup
-  //     if (authenticated || user || (wallets && wallets.length > 0)) {
-        
-  //       // Disconnect all wallets first
-  //       if (wallets && wallets.length > 0) {
-  //         wallets.forEach(wallet => {
-  //           try {
-  //             wallet.disconnect();
-  //           } catch (error) {
-  //             // Silent fail
-  //           }
-  //         });
-  //       }
-        
-  //       // Then logout from Privy - COMMENTED OUT (causing issues)
-  //       // logout().catch(error => {
-  //       //   // Silent fail
-  //       // });
-  //     }
-  //   }
-  // }, [isOpen, authenticated, user, wallets, logout]);
+  // Handle authentication state changes - simplified approach
+  useEffect(() => {
+    if (authenticated && user && isWalletLoading) {
+      // User is authenticated with wallet, create/find user in our database
+      handleWalletAuthentication();
+      setIsWalletLoading(false);
+    }
+  }, [authenticated, user, handleWalletAuthentication, isWalletLoading]);
 
-  // Handle authentication state changes - COMMENTED OUT (causing issues)
-  // useEffect(() => {
-  //   if (authenticated && user) {
-  //     // User is authenticated with wallet, create/find user in our database
-  //     handleWalletAuthentication();
-  //     setIsWalletLoading(false);
-  //   }
-  // }, [authenticated, user, wallets, handleWalletAuthentication]);
+  // Check if Phantom extension is installed
+  const isPhantomInstalled = () => {
+    return typeof window !== 'undefined' && window.solana && window.solana.isPhantom;
+  };
 
-  // Handle wallet connection - bypass Privy modal and go directly to wallet selection - COMMENTED OUT (causing issues)
-  // const handleWalletLogin = async () => {
-  //   setIsWalletLoading(true);
-  //   setError("");
+  // Handle wallet connection - split approach for proper popup
+  const handleWalletConnect = async () => {
+    setIsWalletLoading(true);
+    setError("");
 
-  //   try {
+    try {
+      // Check if Phantom is installed
+      if (!isPhantomInstalled()) {
+        setError("Phantom wallet extension is not installed. Please install Phantom wallet first.");
+        setIsWalletLoading(false);
+        return;
+      }
+
+      console.log('🔗 Attempting to connect wallet...');
+      console.log('🔗 Phantom installed:', isPhantomInstalled());
       
-  //     // Always force a complete logout first to ensure clean state - COMMENTED OUT (causing issues)
-  //     // if (authenticated || user || (wallets && wallets.length > 0)) {
-  //       try {
-  //         // Disconnect all wallets first
-  //         if (wallets && wallets.length > 0) {
-  //           for (const wallet of wallets) {
-  //             try {
-  //               await wallet.disconnect();
-  //             } catch (error) {
-  //               // Silent fail
-  //             }
-  //           }
-  //         }
-          
-  //         // Then logout from Privy - COMMENTED OUT (causing issues)
-  //         // await logout();
-          
-  //         // Wait longer for state to completely clear
-  //         await new Promise(resolve => setTimeout(resolve, 2000));
-  //       } catch (logoutError) {
-  //         // Silent fail
-  //       }
-  //     // }
+      // Use Privy's connectWallet from usePrivy hook (not useConnectWallet)
+      console.log('🔗 Using Privy connectWallet...');
+      await connectWallet();
       
-  //     // Try connectWallet() first to see if it opens the modal - COMMENTED OUT (causing issues)
-  //     // await connectWallet();
+      console.log('✅ Wallet connection successful');
+      setIsWalletLoading(false);
+    } catch (error) {
+      console.error('❌ Wallet connection error:', error);
+      setError("Wallet connection failed. Please try again.");
+      setIsWalletLoading(false);
+    }
+  };
+
+  // Handle wallet login with signature - using Privy's authentication
+  const handleWalletLogin = async () => {
+    if (!solanaWallets || solanaWallets.length === 0) {
+      setError("Please connect a wallet first");
+      return;
+    }
+
+    setIsWalletLoading(true);
+    setError("");
+
+    try {
+      const walletAddress = solanaWallets[0].address;
+      console.log('🔐 Signing message for wallet:', walletAddress);
       
-  //     // Then call login() to authenticate - COMMENTED OUT (causing issues)
-  //     // await login();
+      // Generate SIWS message for the connected wallet
+      const message = await generateSiwsMessage({ address: walletAddress });
+      const encodedMessage = new TextEncoder().encode(message);
       
-  //     // Don't set loading to false here - let the useEffect handle it when authentication completes
-  //   } catch (error) {
-  //     setError("Wallet connection failed.");
-  //     setIsWalletLoading(false);
-  //   }
-  // };
+      // Sign the message with Privy's wallet
+      const results = await solanaWallets[0].signMessage({ message: encodedMessage });
+      console.log('🔐 Signature results:', results);
+      
+      // Login with the signed message using Privy
+      await loginWithSiws({ 
+        message: encodedMessage, 
+        signature: results.signature
+      } as any);
+    } catch (error) {
+      console.error('Wallet login error:', error);
+      setError("Wallet login failed. Please try again.");
+      setIsWalletLoading(false);
+    }
+  };
 
   // Handle keyboard shortcuts
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -210,7 +224,7 @@ export default function SignInModal({ isOpen, onClose, onSuccess, onSwitchToSign
       const data = await response.json();
 
       if (data.success) {
-        onSuccess(data.user.username, data.user.id);
+        onSuccess(data.user.username, data.user._id);
         setUsername("");
         setPassword("");
         setError("");
@@ -308,28 +322,59 @@ export default function SignInModal({ isOpen, onClose, onSuccess, onSwitchToSign
         <div className="mt-6 pt-6 border-t border-white/20">
           <div className="text-center mb-4">
             <p className="text-sm text-white/60">Or connect with your wallet</p>
+            {!isPhantomInstalled() && (
+              <p className="text-xs text-yellow-400 mt-1">
+                <a 
+                  href="https://phantom.app/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="underline hover:text-yellow-300"
+                >
+                  Install Phantom Wallet
+                </a>
+              </p>
+            )}
           </div>
           
-          <button
-            onClick={() => {
-              // handleWalletLogin(); // COMMENTED OUT (causing issues)
-            }}
-            disabled={true}
-            className="w-full rounded-md border border-white/20 bg-white/5 text-white/40 px-4 py-2 text-sm cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {isWalletLoading ? (
-              <div className="flex items-center justify-center">
-                <JumpingDots className="text-white" />
-              </div>
-            ) : (
-              <>
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M21 7h-3V6a3 3 0 0 0-3-3H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1h3a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1zM5 4h10a1 1 0 0 1 1 1v1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zm11 14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8h12v10z"/>
-                </svg>
-                Connect Wallet (Coming Soon)
-              </>
-            )}
-          </button>
+          {!solanaWallets || solanaWallets.length === 0 ? (
+            <button
+              onClick={handleWalletConnect}
+              disabled={isWalletLoading}
+              className="w-full rounded-md border border-white/20 bg-white/5 text-white px-4 py-2 text-sm hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+            >
+              {isWalletLoading ? (
+                <div className="flex items-center justify-center">
+                  <JumpingDots className="text-white" />
+                </div>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M21 7h-3V6a3 3 0 0 0-3-3H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1h3a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1zM5 4h10a1 1 0 0 1 1 1v1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zm11 14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8h12v10z"/>
+                  </svg>
+                  {isPhantomInstalled() ? 'Connect Wallet' : 'Install Phantom First'}
+                </>
+              )}
+            </button>
+          ) : (
+            <button
+              onClick={handleWalletLogin}
+              disabled={isWalletLoading}
+              className="w-full rounded-md border border-white/20 bg-white/5 text-white px-4 py-2 text-sm hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+            >
+              {isWalletLoading ? (
+                <div className="flex items-center justify-center">
+                  <JumpingDots className="text-white" />
+                </div>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M21 7h-3V6a3 3 0 0 0-3-3H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1h3a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1zM5 4h10a1 1 0 0 1 1 1v1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zm11 14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8h12v10z"/>
+                  </svg>
+                  Sign & Login
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>

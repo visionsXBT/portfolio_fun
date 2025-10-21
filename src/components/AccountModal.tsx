@@ -157,7 +157,7 @@ export default function AccountModal({ isOpen, onClose, onSuccess, onSwitchToSig
       const data = await response.json();
 
       if (data.success) {
-        onSuccess(data.user.username, data.user.id);
+        onSuccess(data.user.username, data.user._id);
         
         // Reset form
         setUsername("");

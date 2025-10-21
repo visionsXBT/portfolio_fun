@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrophy, faUser, faCog, faSignOutAlt, faBars, faTimes, faSave, faEye, faEyeSlash, faWallet } from '@fortawesome/free-solid-svg-icons';
-import { useLogout, useWallets, useLogin } from '@privy-io/react-auth';
+import { useLogout, useWallets, useLogin, useConnectWallet, usePrivy } from '@privy-io/react-auth';
 import UserSearchBar from '@/components/UserSearchBar';
 import SignInModal from '@/components/SignInModal';
 import AccountModal from '@/components/AccountModal';
@@ -29,7 +29,7 @@ export default function SettingsPage() {
   const { logout } = useLogout();
   const { wallets } = useWallets();
   const { login } = useLogin();
-  // const { authenticated, user, getAccessToken } = usePrivy();
+  const { authenticated, user, getAccessToken, connectOrCreateWallet, connectWallet } = usePrivy();
   const username = params.username as string;
   
   const [currentUserSession, setCurrentUserSession] = useState<UserSession | null>(null);
@@ -130,14 +130,14 @@ export default function SettingsPage() {
       });
     }
     
-    // Logout from Privy - COMMENTED OUT (causing issues)
-    // try {
-    //   console.log('🔴 Logging out from Privy...');
-    //   await logout();
-    //   console.log('✅ Logged out from Privy');
-    // } catch (error) {
-    //   console.error('❌ Error logging out from Privy:', error);
-    // }
+    // Logout from Privy
+    try {
+      console.log('🔴 Logging out from Privy...');
+      await logout();
+      console.log('✅ Logged out from Privy');
+    } catch (error) {
+      console.error('❌ Error logging out from Privy:', error);
+    }
     
     // Add a small delay to ensure everything is cleared
     console.log('🔴 Waiting 500ms before refresh...');
@@ -212,39 +212,45 @@ export default function SettingsPage() {
     setWalletMessage('');
     
     try {
+      // Connect Solana wallet only
+      await connectWallet({
+        walletChainType: 'solana-only',
+        // Try to force popup behavior
+        suggestedAddress: undefined
+      });
       
-      // First, authenticate with Privy - COMMENTED OUT (causing issues)
-      // await login();
+      // First, authenticate with Privy
+      await login();
       
       // Get access token from Privy
-      // const accessToken = await getAccessToken();
-      // if (!accessToken) {
-      //   throw new Error('Failed to get access token from Privy');
-      // }
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        throw new Error('Failed to get access token from Privy');
+      }
       
       // Connect wallet to existing email account
-      // const response = await fetch('/api/auth', {
-      //   method: 'POST',
-      //   headers: { 
-      //     'Content-Type': 'application/json',
-      //     'Authorization': `Bearer ${accessToken}`
-      //   },
-      //   body: JSON.stringify({ 
-      //     action: 'connect-wallet'
-      //   })
-      // });
+      const response = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({ 
+          action: 'connect-wallet'
+        })
+      });
       
-      // const data = await response.json();
+      const data = await response.json();
       
-      // if (data.success) {
-      //   setWalletMessage('Wallet connected successfully! Refreshing page...');
-      //   // Refresh the page to update the user session
-      //   setTimeout(() => {
-      //     window.location.reload();
-      //   }, 1500);
-      // } else {
-      //   setWalletMessage(data.error || 'Failed to connect wallet');
-      // }
+      if (data.success) {
+        setWalletMessage('Wallet connected successfully! Refreshing page...');
+        // Refresh the page to update the user session
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        setWalletMessage(data.error || 'Failed to connect wallet');
+      }
     } catch (error) {
       setWalletMessage('Wallet connection failed. Please try again.');
     } finally {
@@ -307,7 +313,7 @@ export default function SettingsPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-white">Loading...</div>
+        <div className="text-gray-800">Loading...</div>
       </div>
     );
   }
@@ -316,8 +322,8 @@ export default function SettingsPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Please Sign In</h1>
-          <p className="text-white/60 mb-6">You need to be signed in to access settings.</p>
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Please Sign In</h1>
+          <p className="text-gray-800/60 mb-6">You need to be signed in to access settings.</p>
           <button
             onClick={() => router.push('/')}
             className="rounded-lg gradient-button px-6 py-3 text-white"
@@ -333,14 +339,14 @@ export default function SettingsPage() {
     <div className="min-h-screen flex" style={{ fontFamily: 'Golos Text, sans-serif' }}>
       {/* Navigation Bar */}
       <div className={`
-        fixed left-0 top-0 h-screen w-48 bg-white/5 backdrop-blur-md border-r border-white/10 z-40
+        fixed left-0 top-0 h-screen w-80 glassmorphism z-40 border-r border-[#b8bdbf]
         transform transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0 lg:static lg:h-auto lg:w-auto lg:bg-transparent lg:backdrop-blur-none lg:border-r-0
-      `}>
-        <div className="flex flex-col h-screen p-6 pb-16">
+        lg:translate-x-0 lg:static lg:h-auto lg:w-64 lg:bg-transparent lg:backdrop-blur-none lg:border-r-0
+      `} style={{ borderRight: '3px solid rgba(107, 114, 128, 0.5)' }}>
+        <div className="flex flex-col h-screen p-2 pb-16 pt-16 lg:pt-2">
           {/* Logo Section */}
-          <div className="flex flex-col items-center gap-3 mb-8">
+          <div className="flex flex-col items-start gap-2 mb-6">
             <Link href="/" className="w-40 h-20 hover:opacity-80 transition-opacity">
               <Image
                 src="/logo.png"
@@ -351,7 +357,7 @@ export default function SettingsPage() {
               />
             </Link>
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full border border-white/20 overflow-hidden">
+              <div className="w-12 h-12 rounded-full border border-[#b8bdbf] overflow-hidden">
                 {currentUserSession.profilePicture ? (
                   <Image
                     src={currentUserSession.profilePicture}
@@ -367,10 +373,10 @@ export default function SettingsPage() {
                 )}
               </div>
               <div className="text-left">
-                <div className="text-white font-medium text-lg">
+                <div className="text-gray-800 font-medium text-lg">
                   {currentUserSession.displayName || currentUserSession.username}
                 </div>
-                <div className="text-white/60 text-sm">
+                <div className="text-gray-800/60 text-sm">
                   Portfolio Creator
                 </div>
               </div>
@@ -381,7 +387,7 @@ export default function SettingsPage() {
           <nav className="space-y-2">
             <Link
               href="/leaderboard"
-              className="flex items-center gap-3 px-4 py-3 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-800/80 hover:text-gray-800 hover:bg-[#d7dadb]/60 transition-colors border border-[#b8bdbf]"
               onClick={() => setIsOpen(false)}
             >
               <FontAwesomeIcon icon={faTrophy} className="w-5 h-5" />
@@ -390,14 +396,14 @@ export default function SettingsPage() {
             
             <Link
               href={`/${currentUserSession.username}`}
-              className="flex items-center gap-3 px-4 py-3 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-800/80 hover:text-gray-800 hover:bg-[#d7dadb]/60 transition-colors border border-[#b8bdbf]"
               onClick={() => setIsOpen(false)}
             >
               <FontAwesomeIcon icon={faUser} className="w-5 h-5" />
               <span className="font-medium">Portfolio</span>
             </Link>
             
-            <div className="flex items-center gap-3 px-4 py-3 rounded-lg text-white bg-white/10">
+            <div className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-800 bg-[#d7dadb]/60 border border-[#b8bdbf]">
               <FontAwesomeIcon icon={faCog} className="w-5 h-5" />
               <span className="font-medium">Settings</span>
             </div>
@@ -411,7 +417,8 @@ export default function SettingsPage() {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-2 text-white"
+        className="lg:hidden fixed top-4 left-4 z-50 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-2 text-gray-800"
+        style={{ fontFamily: 'Golos Text, sans-serif' }}
       >
         <FontAwesomeIcon icon={isOpen ? faTimes : faBars} />
       </button>
@@ -425,13 +432,13 @@ export default function SettingsPage() {
       )}
 
             {/* Main Content */}
-            <div className="flex-1 lg:ml-48 lg:pl-0 p-4 sm:p-6 md:p-8 pb-16 pt-16 lg:pt-8">
+            <div className="flex-1 lg:ml-12 lg:pl-2 p-4 sm:p-6 md:p-8 pb-16 pt-16 lg:pt-8">
         <div className="w-full">
           {/* Header */}
           <div className="mb-4">
             <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-4">
               {/* Search Bar */}
-              <div className="w-full sm:flex-1 sm:max-w-md order-2 sm:order-1">
+              <div className="w-full sm:flex-1 sm:max-w-2xl order-2 sm:order-1">
                 <UserSearchBar />
               </div>
               
@@ -442,8 +449,8 @@ export default function SettingsPage() {
               </div>
             </div>
             
-            <h1 className="text-2xl font-semibold mb-1 text-white">Settings</h1>
-            <p className="text-white/60 text-sm">
+            <h1 className="text-2xl font-semibold mb-1 text-gray-800 drop-shadow-lg">Settings</h1>
+            <p className="text-gray-800/60 text-sm drop-shadow-md">
               Manage your account settings and preferences.
             </p>
           </div>
@@ -451,8 +458,8 @@ export default function SettingsPage() {
           {/* Settings Content */}
           <div className="space-y-6">
             {/* Profile Picture Upload */}
-            <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6">
-              <h2 className="text-xl font-semibold text-white mb-4">Profile Picture</h2>
+            <div className="glassmorphism p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Profile Picture</h2>
               <ProfilePictureUpload
                 currentImage={currentUserSession.profilePicture}
                 onImageChange={(newProfilePicture: string | null) => {
@@ -464,43 +471,43 @@ export default function SettingsPage() {
             </div>
 
             {/* Account Information */}
-            <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6">
-              <h2 className="text-xl font-semibold text-white mb-4">Account Information</h2>
+            <div className="glassmorphism p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Account Information</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm text-white/80 mb-2">
+                  <label className="block text-sm text-gray-800/80 mb-2">
                     {currentUserSession.accountType === 'wallet' ? 'Wallet Address' : 'Username'}
                   </label>
-                  <div className="bg-white/10 border border-white/20 rounded-md px-3 py-2 text-white">
+                  <div className="bg-[#d7dadb]/60 border border-[#b8bdbf] rounded-md px-3 py-2 text-gray-800">
                     {currentUserSession.accountType === 'wallet' ? currentUserSession.walletAddress : currentUserSession.username}
                   </div>
                 </div>
                 {currentUserSession.accountType === 'wallet' && currentUserSession.displayName && (
                   <div>
-                    <label className="block text-sm text-white/80 mb-2">Display Name</label>
-                    <div className="bg-white/10 border border-white/20 rounded-md px-3 py-2 text-white">
+                    <label className="block text-sm text-gray-800/80 mb-2">Display Name</label>
+                    <div className="bg-[#d7dadb]/60 border border-[#b8bdbf] rounded-md px-3 py-2 text-gray-800">
                       {currentUserSession.displayName}
                     </div>
                   </div>
                 )}
                 <div>
-                  <label className="block text-sm text-white/80 mb-2">Account Type</label>
-                  <div className="bg-white/10 border border-white/20 rounded-md px-3 py-2 text-white">
+                  <label className="block text-sm text-gray-800/80 mb-2">Account Type</label>
+                  <div className="bg-[#d7dadb]/60 border border-[#b8bdbf] rounded-md px-3 py-2 text-gray-800">
                     {currentUserSession.accountType === 'wallet' ? 'Wallet Account' : 'User Account'}
                   </div>
                 </div>
                 {currentUserSession.email && (
                   <div>
-                    <label className="block text-sm text-white/80 mb-2">Email</label>
-                    <div className="bg-white/10 border border-white/20 rounded-md px-3 py-2 text-white">
+                    <label className="block text-sm text-gray-800/80 mb-2">Email</label>
+                    <div className="bg-[#d7dadb]/60 border border-[#b8bdbf] rounded-md px-3 py-2 text-gray-800">
                       {currentUserSession.email}
                     </div>
                   </div>
                 )}
                 {currentUserSession.accountType === 'wallet' && currentUserSession.walletAddress && (
                   <div>
-                    <label className="block text-sm text-white/80 mb-2">Wallet Address</label>
-                    <div className="bg-white/10 border border-white/20 rounded-md px-3 py-2 text-white font-mono text-sm">
+                    <label className="block text-sm text-gray-800/80 mb-2">Wallet Address</label>
+                    <div className="bg-[#d7dadb]/60 border border-[#b8bdbf] rounded-md px-3 py-2 text-gray-800 font-mono text-sm">
                       {currentUserSession.walletAddress}
                     </div>
                   </div>
@@ -510,19 +517,19 @@ export default function SettingsPage() {
 
             {/* Display Name Change (Wallet Users Only) */}
             {currentUserSession.accountType === 'wallet' && !currentUserSession.usernameSet && (
-              <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6">
-                <h2 className="text-xl font-semibold text-white mb-4">Set Your Display Name</h2>
-                <p className="text-white/60 text-sm mb-4">
+              <div className="glassmorphism p-6">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Set Your Display Name</h2>
+                <p className="text-gray-800/60 text-sm mb-4">
                   Choose a display name that will be shown on your profile. You can only set this once!
                 </p>
                 <form onSubmit={handleDisplayNameChange} className="space-y-4">
                   <div>
-                    <label className="block text-sm text-white/80 mb-2">Display Name</label>
+                    <label className="block text-sm text-gray-800/80 mb-2">Display Name</label>
                     <input
                       type="text"
                       value={newDisplayName}
                       onChange={(e) => setNewDisplayName(e.target.value)}
-                      className="w-full bg-white/10 border border-white/20 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
+                      className="w-full bg-[#d7dadb]/60 border border-[#b8bdbf] rounded-md px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
                       placeholder="Enter your display name"
                       required
                       minLength={3}
@@ -559,20 +566,17 @@ export default function SettingsPage() {
 
             {/* Wallet Connection (Email Users Only) */}
             {currentUserSession.accountType === 'email' && (
-              <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6">
-                <h2 className="text-xl font-semibold text-white mb-4">Connect Wallet</h2>
-                <p className="text-white/60 text-sm mb-4">
+              <div className="glassmorphism p-6">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Connect Wallet</h2>
+                <p className="text-gray-800/60 text-sm mb-4">
                   Connect a wallet to your account for additional security and features.
                 </p>
                 <button
-                  onClick={() => {
-                    handleWalletConnection();
-                  }}
-                  disabled={true}
-                  className="flex items-center gap-2 rounded-md bg-white/10 text-white/40 px-4 py-2 text-sm cursor-not-allowed"
+                  onClick={handleWalletConnection}
+                  className="flex items-center gap-2 rounded-md bg-[#d7dadb]/60 text-gray-800 px-4 py-2 text-sm hover:bg-[#d7dadb]/80 transition-colors border border-[#b8bdbf]"
                 >
                   <FontAwesomeIcon icon={faWallet} />
-                  Connect Wallet (Coming Soon)
+                  Connect Wallet
                 </button>
                 {walletMessage && (
                   <div className={`text-sm mt-2 ${walletMessage.includes('successfully') ? 'text-green-400' : 'text-red-400'}`}>
@@ -584,23 +588,23 @@ export default function SettingsPage() {
 
             {/* Change Password (Email Users Only) */}
             {currentUserSession.accountType === 'email' && (
-              <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6">
-                <h2 className="text-xl font-semibold text-white mb-4">Change Password</h2>
+              <div className="glassmorphism p-6">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Change Password</h2>
               <form onSubmit={handlePasswordChange} className="space-y-4">
                 <div>
-                  <label className="block text-sm text-white/80 mb-2">Current Password</label>
+                  <label className="block text-sm text-gray-800/80 mb-2">Current Password</label>
                   <div className="relative">
                     <input
                       type={showPassword ? "text" : "password"}
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
-                      className="w-full bg-white/10 border border-white/20 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
+                      className="w-full bg-[#d7dadb]/60 border border-[#b8bdbf] rounded-md px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-800/60 hover:text-gray-800"
                     >
                       <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
                     </button>
@@ -608,24 +612,24 @@ export default function SettingsPage() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm text-white/80 mb-2">New Password</label>
+                  <label className="block text-sm text-gray-800/80 mb-2">New Password</label>
                   <input
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full bg-white/10 border border-white/20 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
+                    className="w-full bg-[#d7dadb]/60 border border-[#b8bdbf] rounded-md px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
                     required
                     minLength={6}
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm text-white/80 mb-2">Confirm New Password</label>
+                  <label className="block text-sm text-gray-800/80 mb-2">Confirm New Password</label>
                   <input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full bg-white/10 border border-white/20 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
+                    className="w-full bg-[#d7dadb]/60 border border-[#b8bdbf] rounded-md px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
                     required
                     minLength={6}
                   />
@@ -659,7 +663,7 @@ export default function SettingsPage() {
             console.log('🔴 Sign out button clicked!');
             handleLogout();
           }}
-          className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors bg-black/20 backdrop-blur-sm border border-red-500/20"
+          className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors glassmorphism border border-red-500/20"
         >
           <FontAwesomeIcon icon={faSignOutAlt} className="w-5 h-5" />
           <span className="font-medium">Sign Out</span>

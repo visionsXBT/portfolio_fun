@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAccount, authenticateUser } from '@/lib/database';
 import { connectToDatabase } from '@/lib/mongodb';
-import { verifyPrivyToken, extractAccessToken } from '@/lib/privy-verification';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { ObjectId } from 'mongodb';
@@ -29,55 +28,44 @@ async function createSession(userId: string, username: string) {
   // Store session in database
   await db.collection('sessions').insertOne(sessionData);
 
-  return sessionToken;
+  return {
+    sessionToken,
+    expiresAt: sessionData.expiresAt
+  };
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { action, username, password, currentPassword, newPassword, walletAddress, privyUserId, newDisplayName } = await request.json();
+    const { action, username, password, currentPassword, newPassword, walletAddress, newDisplayName } = await request.json();
 
     if (action === 'signup') {
-      const user = await createAccount(username, password);
-      if (!user || !user._id || !user.username) {
+      if (!username || !password) {
         return NextResponse.json({ 
           success: false, 
-          error: 'Failed to create account' 
-        }, { status: 500 });
+          error: 'Username and password are required' 
+        }, { status: 400 });
       }
-      
-      const sessionToken = await createSession(user._id.toString(), user.username);
-      
-      // Create response with session cookie
-      const response = NextResponse.json({ 
-        success: true, 
-        user: { id: user._id, username: user.username, createdAt: user.createdAt }
-      });
 
-      // Set secure HTTP-only cookie
-      response.cookies.set('sessionToken', sessionToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
-        path: '/'
-      });
-
-      return response;
-    }
-
-    if (action === 'signin') {
-      const user = await authenticateUser(username, password);
-      if (user && user._id && user.username) {
-        const sessionToken = await createSession(user._id.toString(), user.username);
+      try {
+        const result = await createAccount(username, password);
         
+        // Create session
+        const session = await createSession(result._id?.toString() || '', username);
+
         // Create response with session cookie
-        const response = NextResponse.json({ 
-          success: true, 
-          user: { id: user._id, username: user.username, createdAt: user.createdAt }
+        const response = NextResponse.json({
+          success: true,
+          user: {
+            _id: result._id,
+            username: result.username,
+            displayName: result.displayName,
+            accountType: result.accountType
+          },
+          sessionToken: session.sessionToken
         });
 
         // Set secure HTTP-only cookie
-        response.cookies.set('sessionToken', sessionToken, {
+        response.cookies.set('sessionToken', session.sessionToken, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax',
@@ -86,7 +74,58 @@ export async function POST(request: NextRequest) {
         });
 
         return response;
-      } else {
+      } catch (error: any) {
+        return NextResponse.json({ 
+          success: false, 
+          error: error.message 
+        }, { status: 400 });
+      }
+    }
+
+    if (action === 'signin') {
+      if (!username || !password) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Username and password are required' 
+        }, { status: 400 });
+      }
+
+      try {
+        const result = await authenticateUser(username, password);
+        
+        if (!result) {
+          return NextResponse.json({ 
+            success: false, 
+            error: 'Invalid username or password' 
+          }, { status: 401 });
+        }
+        
+        // Create session
+        const session = await createSession(result._id?.toString() || '', username);
+
+        // Create response with session cookie
+        const response = NextResponse.json({
+          success: true,
+          user: {
+            _id: result._id,
+            username: result.username,
+            displayName: result.displayName,
+            accountType: result.accountType
+          },
+          sessionToken: session.sessionToken
+        });
+
+        // Set secure HTTP-only cookie
+        response.cookies.set('sessionToken', session.sessionToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
+          path: '/'
+        });
+
+        return response;
+      } catch (error: any) {
         return NextResponse.json({ 
           success: false, 
           error: 'Invalid username or password' 
@@ -95,41 +134,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'wallet-auth') {
-      if (!walletAddress || !privyUserId) {
+      if (!walletAddress) {
         return NextResponse.json({ 
           success: false, 
-          error: 'Wallet address and Privy user ID are required' 
+          error: 'Wallet address is required' 
         }, { status: 400 });
-      }
-
-      // Verify Privy access token
-      const authHeader = request.headers.get('authorization');
-      const accessToken = extractAccessToken(authHeader);
-      
-      if (!accessToken) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Authorization header with Bearer token is required' 
-        }, { status: 401 });
-      }
-
-      try {
-        const verifiedToken = await verifyPrivyToken(accessToken);
-        console.log('Verified Privy token:', verifiedToken);
-        
-        // Verify that the token's user ID matches the provided privyUserId
-        if (verifiedToken.sub !== privyUserId) {
-          return NextResponse.json({ 
-            success: false, 
-            error: 'Token user ID does not match provided user ID' 
-          }, { status: 401 });
-        }
-      } catch (error) {
-        console.error('Token verification failed:', error);
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Invalid or expired token' 
-        }, { status: 401 });
       }
 
       const db = await connectToDatabase();
@@ -142,10 +151,7 @@ export async function POST(request: NextRequest) {
 
       // Check if user already exists with this wallet address
       let user = await db.collection('users').findOne({
-        $or: [
-          { walletAddress: walletAddress.toLowerCase() },
-          { privyUserId }
-        ]
+        walletAddress: walletAddress.toLowerCase()
       });
 
       if (!user) {
@@ -165,294 +171,53 @@ export async function POST(request: NextRequest) {
           email: null,
           password: null,
           walletAddress: walletAddress.toLowerCase(),
-          privyUserId,
           accountType: 'wallet',
           displayName: null, // Will be set when user chooses their display name
-          usernameSet: false,
           createdAt: new Date(),
-          updatedAt: new Date(),
-          portfolios: []
+          updatedAt: new Date()
         };
 
         const result = await db.collection('users').insertOne(newUser);
         user = { ...newUser, _id: result.insertedId };
       }
 
-      if (user && user._id && user.username) {
-        const sessionToken = await createSession(user._id.toString(), user.username);
-        
-        // Create response with session cookie
-        const response = NextResponse.json({ 
-          success: true, 
-          user: { 
-            id: user._id, 
-            username: user.username, 
-            accountType: user.accountType,
-            walletAddress: user.walletAddress,
-            usernameSet: user.usernameSet,
-            createdAt: user.createdAt 
-          }
-        });
+      // Create session
+      const session = await createSession(user._id?.toString() || '', user.username || '');
 
-        // Set secure HTTP-only cookie
-        response.cookies.set('sessionToken', sessionToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
-          path: '/'
-        });
-
-        return response;
-      } else {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Failed to authenticate wallet' 
-        }, { status: 500 });
-      }
-    }
-
-    if (action === 'connect-wallet') {
-      // Get session token from cookie
-      const sessionToken = request.cookies.get('sessionToken')?.value;
-      if (!sessionToken) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Not authenticated' 
-        }, { status: 401 });
-      }
-
-      // Verify session
-      const db = await connectToDatabase();
-      if (!db) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Database connection failed' 
-        }, { status: 500 });
-      }
-
-      const session = await db.collection('sessions').findOne({ 
-        sessionToken, 
-        isActive: true,
-        expiresAt: { $gt: new Date() }
-      });
-
-      if (!session) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Invalid session' 
-        }, { status: 401 });
-      }
-
-      // Get user from database
-      const user = await db.collection('users').findOne({ _id: new ObjectId(session.userId) });
-      if (!user) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'User not found' 
-        }, { status: 404 });
-      }
-
-      // Check if user already has a wallet connected
-      if (user.accountType === 'wallet') {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'User already has a wallet connected' 
-        }, { status: 400 });
-      }
-
-      // Verify Privy access token
-      const authHeader = request.headers.get('authorization');
-      const accessToken = extractAccessToken(authHeader);
-      
-      if (!accessToken) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Authorization header with Bearer token is required' 
-        }, { status: 401 });
-      }
-
-      try {
-        const verifiedToken = await verifyPrivyToken(accessToken);
-        console.log('Verified Privy token for wallet connection:', verifiedToken);
-        
-        // Get wallet address from Privy token
-        let walletAddress;
-        if (verifiedToken.linkedAccounts && verifiedToken.linkedAccounts.length > 0) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const solanaAccount = verifiedToken.linkedAccounts.find((account: any) => 
-            account.type === 'wallet' && account.chainType === 'solana'
-          );
-          if (solanaAccount && 'address' in solanaAccount) {
-            walletAddress = solanaAccount.address;
-          }
-        }
-
-        if (!walletAddress) {
-          return NextResponse.json({ 
-            success: false, 
-            error: 'No wallet address found in Privy account' 
-          }, { status: 400 });
-        }
-
-        // Update user to include wallet information (keep email account type and username)
-        await db.collection('users').updateOne(
-          { _id: user._id },
-          { 
-            $set: { 
-              walletAddress: walletAddress.toLowerCase(),
-              privyUserId: verifiedToken.sub,
-              // Keep accountType as 'email' to maintain /{username} URL structure
-              updatedAt: new Date()
-            }
-          }
-        );
-
-        return NextResponse.json({ 
-          success: true, 
-          message: 'Wallet connected successfully',
-          user: {
-            id: user._id,
-            username: user.username,
-            accountType: 'email', // Keep as email to maintain /{username} URL structure
-            walletAddress: walletAddress.toLowerCase()
-          }
-        });
-      } catch (error) {
-        console.error('Token verification failed:', error);
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Invalid or expired token' 
-        }, { status: 401 });
-      }
-    }
-
-    if (action === 'change-display-name') {
-      // Get session token from cookie
-      const sessionToken = request.cookies.get('sessionToken')?.value;
-      if (!sessionToken) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Not authenticated' 
-        }, { status: 401 });
-      }
-
-      // Verify session
-      const db = await connectToDatabase();
-      if (!db) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Database connection failed' 
-        }, { status: 500 });
-      }
-
-      const session = await db.collection('sessions').findOne({ 
-        sessionToken, 
-        isActive: true,
-        expiresAt: { $gt: new Date() }
-      });
-
-      if (!session) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Invalid session' 
-        }, { status: 401 });
-      }
-
-      // Get user from database
-      const user = await db.collection('users').findOne({ _id: new ObjectId(session.userId) });
-      if (!user) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'User not found' 
-        }, { status: 404 });
-      }
-
-      // Only allow wallet users to change display name
-      if (user.accountType !== 'wallet') {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Only wallet users can change display name' 
-        }, { status: 400 });
-      }
-
-      // Check if user has already set their display name
-      if (user.usernameSet) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Display name can only be set once' 
-        }, { status: 400 });
-      }
-
-
-      if (!newDisplayName || newDisplayName.trim().length < 3) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Display name must be at least 3 characters' 
-        }, { status: 400 });
-      }
-
-      if (newDisplayName.trim().length > 20) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Display name must be 20 characters or less' 
-        }, { status: 400 });
-      }
-
-      // Check if display name is already taken
-      const existingUser = await db.collection('users').findOne({ 
-        displayName: newDisplayName.trim(),
-        _id: { $ne: user._id }
-      });
-
-      if (existingUser) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Display name is already taken' 
-        }, { status: 400 });
-      }
-
-      // Update user with new display name
-      await db.collection('users').updateOne(
-        { _id: user._id },
-        { 
-          $set: { 
-            displayName: newDisplayName.trim(),
-            usernameSet: true,
-            updatedAt: new Date()
-          }
-        }
-      );
-
-      return NextResponse.json({ 
-        success: true, 
-        message: 'Display name set successfully',
+      // Create response with session cookie
+      const response = NextResponse.json({
+        success: true,
         user: {
-          id: user._id,
-          username: user.username, // Keep the wallet-based username for URL
-          displayName: newDisplayName.trim(),
-          accountType: user.accountType,
+          _id: user._id,
+          username: user.username,
+          displayName: user.displayName,
           walletAddress: user.walletAddress,
-          usernameSet: true
-        }
+          accountType: user.accountType
+        },
+        sessionToken: session.sessionToken
       });
-    }
 
-    if (action === 'logout') {
-      // Clear the session cookie
-      const response = NextResponse.json({ success: true });
-      response.cookies.set('sessionToken', '', {
+      // Set secure HTTP-only cookie
+      response.cookies.set('sessionToken', session.sessionToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 0, // Expire immediately
+        maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
         path: '/'
       });
+
       return response;
     }
 
-    if (action === 'change-password') {
-      // Get session token from cookie
+    if (action === 'change-display-name') {
+      if (!newDisplayName || !newDisplayName.trim()) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Display name is required' 
+        }, { status: 400 });
+      }
+
+      // Get session token from cookies
       const sessionToken = request.cookies.get('sessionToken')?.value;
       if (!sessionToken) {
         return NextResponse.json({ 
@@ -461,7 +226,6 @@ export async function POST(request: NextRequest) {
         }, { status: 401 });
       }
 
-      // Verify session
       const db = await connectToDatabase();
       if (!db) {
         return NextResponse.json({ 
@@ -470,8 +234,9 @@ export async function POST(request: NextRequest) {
         }, { status: 500 });
       }
 
-      const session = await db.collection('sessions').findOne({ 
-        sessionToken, 
+      // Verify session
+      const session = await db.collection('sessions').findOne({
+        sessionToken,
         isActive: true,
         expiresAt: { $gt: new Date() }
       });
@@ -479,31 +244,35 @@ export async function POST(request: NextRequest) {
       if (!session) {
         return NextResponse.json({ 
           success: false, 
-          error: 'Invalid session' 
+          error: 'Invalid or expired session' 
         }, { status: 401 });
       }
 
-      // Get user from database
-      const user = await db.collection('users').findOne({ 
-        _id: new ObjectId(session.userId) 
+      // Update user's display name
+      const result = await db.collection('users').updateOne(
+        { _id: new ObjectId(session.userId) },
+        { 
+          $set: { 
+            displayName: newDisplayName.trim(),
+            updatedAt: new Date()
+          } 
+        }
+      );
+
+      if (result.modifiedCount === 0) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Failed to update display name' 
+        }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Display name updated successfully'
       });
+    }
 
-      if (!user) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'User not found' 
-        }, { status: 404 });
-      }
-
-      // Check if user is a wallet account (they don't have passwords)
-      if (user.accountType === 'wallet') {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Wallet accounts do not use passwords' 
-        }, { status: 400 });
-      }
-
-      // Validate password fields
+    if (action === 'change-password') {
       if (!currentPassword || !newPassword) {
         return NextResponse.json({ 
           success: false, 
@@ -511,52 +280,95 @@ export async function POST(request: NextRequest) {
         }, { status: 400 });
       }
 
+      // Get session token from cookies
+      const sessionToken = request.cookies.get('sessionToken')?.value;
+      if (!sessionToken) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Not authenticated' 
+        }, { status: 401 });
+      }
 
-      // Debug: Check what we have for user.passwordHash
-      console.log('User password debug:', {
-        userPasswordHashExists: !!user.passwordHash,
-        userPasswordHashType: typeof user.passwordHash,
-        userPasswordHashLength: user.passwordHash?.length,
-        userAccountType: user.accountType,
-        userId: user._id
+      const db = await connectToDatabase();
+      if (!db) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Database connection failed' 
+        }, { status: 500 });
+      }
+
+      // Verify session
+      const session = await db.collection('sessions').findOne({
+        sessionToken,
+        isActive: true,
+        expiresAt: { $gt: new Date() }
       });
 
-      // Handle case where user doesn't have a password set (shouldn't happen for email accounts, but can occur)
-      if (!user.passwordHash) {
-        console.log('WARNING: User passwordHash is undefined/null for email account, allowing password to be set');
-        // For email accounts without a password, we'll skip the current password verification
-        // and just set the new password directly
-      } else {
-        // Verify current password only if user has a password
-        const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
-        if (!isCurrentPasswordValid) {
-          return NextResponse.json({ 
-            success: false, 
-            error: 'Current password is incorrect' 
-          }, { status: 400 });
-        }
+      if (!session) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Invalid or expired session' 
+        }, { status: 401 });
+      }
+
+      // Get user
+      const user = await db.collection('users').findOne({
+        _id: new ObjectId(session.userId)
+      });
+
+      if (!user || !user.password) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'User not found or no password set' 
+        }, { status: 404 });
+      }
+
+      // Verify current password
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isCurrentPasswordValid) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Current password is incorrect' 
+        }, { status: 401 });
       }
 
       // Hash new password
       const hashedNewPassword = await bcrypt.hash(newPassword, 12);
 
-      // Update password in database
-      await db.collection('users').updateOne(
-        { _id: user._id },
-        { $set: { passwordHash: hashedNewPassword } }
+      // Update password
+      const result = await db.collection('users').updateOne(
+        { _id: new ObjectId(session.userId) },
+        { 
+          $set: { 
+            password: hashedNewPassword,
+            updatedAt: new Date()
+          } 
+        }
       );
 
-      return NextResponse.json({ 
-        success: true, 
-        message: 'Password changed successfully' 
+      if (result.modifiedCount === 0) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Failed to update password' 
+        }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Password updated successfully'
       });
     }
 
-    return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
-  } catch (error) {
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+      error: 'Invalid action' 
+    }, { status: 400 });
+
+  } catch (error) {
+    console.error('Auth API error:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Internal server error' 
     }, { status: 500 });
   }
 }

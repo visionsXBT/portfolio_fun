@@ -49,3 +49,67 @@ export async function GET(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const { name } = await request.json();
+    
+    if (!id) {
+      return NextResponse.json({ error: 'Portfolio ID required' }, { status: 400 });
+    }
+
+    if (!name || !name.trim()) {
+      return NextResponse.json({ error: 'Portfolio name required' }, { status: 400 });
+    }
+
+    try {
+      const db = await connectToDatabase();
+      if (!db) {
+        return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
+      }
+
+      // Find the user who owns this portfolio
+      const users = await db.collection('users').find({}).toArray();
+      
+      for (const user of users) {
+        if (user.portfolios && Array.isArray(user.portfolios)) {
+          const portfolioIndex = user.portfolios.findIndex((p: { id: string }) => p.id === id);
+          if (portfolioIndex !== -1) {
+            // Update the portfolio name
+            const updatedPortfolios = [...user.portfolios];
+            updatedPortfolios[portfolioIndex] = {
+              ...updatedPortfolios[portfolioIndex],
+              name: name.trim()
+            };
+
+            // Update the user's portfolios in the database
+            await db.collection('users').updateOne(
+              { _id: user._id },
+              { $set: { portfolios: updatedPortfolios } }
+            );
+
+            return NextResponse.json({ 
+              success: true, 
+              message: 'Portfolio updated successfully' 
+            }, { status: 200 });
+          }
+        }
+      }
+
+      // Portfolio not found
+      return NextResponse.json({ error: 'Portfolio not found' }, { status: 404 });
+
+    } catch (dbError) {
+      console.error('Database error:', dbError);
+      return NextResponse.json({ error: 'Database error' }, { status: 500 });
+    }
+
+  } catch (error) {
+    console.error('Error updating portfolio:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

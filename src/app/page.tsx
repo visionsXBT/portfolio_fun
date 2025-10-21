@@ -70,7 +70,7 @@ export default function Home() {
         <Logo size="large" />
         <button 
           onClick={() => setShowFAQModal(true)}
-          className="rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 px-3 py-2 text-sm font-medium text-white transition-colors"
+          className="rounded-lg border border-[#eaeaea] bg-white/20 backdrop-blur-md hover:bg-[#e2e4e5]/30 px-3 py-2 text-sm font-medium text-gray-800 transition-colors shadow-lg shadow-gray-800/30"
         >
           <FontAwesomeIcon icon={faQuestionCircle} className="mr-2" />
           FAQs
@@ -79,9 +79,9 @@ export default function Home() {
       {/* Hero section */}
       <section className="flex-1 flex flex-col items-center justify-center px-4 sm:px-8 md:px-12 lg:px-16 xl:px-20 py-4 sm:py-8 md:py-12 lg:py-16 xl:py-20 w-full max-w-7xl mx-auto">
         <div className="w-full text-center flex flex-col items-center justify-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm md:text-base mb-4 sm:mb-6 md:mb-8">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#eaeaea] bg-white/20 backdrop-blur-md px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm md:text-base mb-4 sm:mb-6 md:mb-8 shadow-md shadow-gray-800/20">
             <span className="inline-block h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-green-500 led-pulse" />
-            Build portfolios of any kind with onPort
+            Build portfolios of any kind with goPort
           </div>
           
           {/* Hero Image */}
@@ -102,7 +102,7 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row items-center gap-3 md:gap-4 w-full">
               <button 
                 onClick={() => setShowSignInModal(true)}
-                className="w-full sm:flex-1 rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 px-6 py-3 md:px-8 md:py-4 text-sm md:text-base font-medium text-white transition-colors"
+                className="w-full sm:flex-1 rounded-lg border border-[#eaeaea] bg-white/20 backdrop-blur-md hover:bg-[#e2e4e5]/30 px-6 py-3 md:px-8 md:py-4 text-sm md:text-base font-medium text-gray-800 transition-colors shadow-lg shadow-gray-800/30"
               >
                 Sign In
               </button>
@@ -113,7 +113,7 @@ export default function Home() {
                 Create Account
               </button>
             </div>
-            <Link href="/leaderboard" className="w-full rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 px-6 py-3 md:px-8 md:py-4 text-sm md:text-base font-medium text-white transition-colors text-center">
+            <Link href="/leaderboard" className="w-full rounded-lg border border-[#eaeaea] bg-white/20 backdrop-blur-md hover:bg-[#e2e4e5]/30 px-6 py-3 md:px-8 md:py-4 text-sm md:text-base font-medium text-gray-800 transition-colors text-center shadow-lg shadow-gray-800/30">
               <FontAwesomeIcon icon={faTrophy} /> View Leaderboard
             </Link>
           </div>
@@ -164,7 +164,7 @@ export default function Home() {
           onClick={() => setShowFAQModal(false)}
         >
           <div 
-            className="bg-white/20 backdrop-blur-md rounded-xl border border-white/30 p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+            className="bg-white/20 backdrop-blur-md rounded-xl border border-[#eaeaea] p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl shadow-gray-900/50"
             onClick={(e) => e.stopPropagation()}
             style={{ fontFamily: 'Golos Text, sans-serif' }}
           >

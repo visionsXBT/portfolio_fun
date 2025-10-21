@@ -59,7 +59,7 @@ export default function BottomBar() {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white/5 backdrop-blur-sm border-t border-white/10 z-50">
+    <div className="fixed bottom-0 left-0 right-0 bg-white/20 backdrop-blur-md border-t border-[#eaeaea] z-50" style={{ boxShadow: '0 -10px 15px -3px rgba(0, 0, 0, 0.1), 0 -4px 6px -2px rgba(0, 0, 0, 0.05)' }}>
       <div className="max-w-7xl mx-auto px-4 py-2"> {/* py-2 for thinner bar */}
         <div className="flex items-center justify-between">
           {/* Left side - LED indicators with logos */}
@@ -107,7 +107,7 @@ export default function BottomBar() {
                 className="w-4 h-4"
               />
               <div className="text-right">
-                <div className="text-white font-medium text-xs"> {/* Smaller text */}
+                <div className="text-gray-800 font-medium text-xs"> {/* Smaller text */}
                   {isLoading ? '...' : solPrice ? formatPrice(solPrice.price) : 'N/A'}
                 </div>
                 {solPrice && (
@@ -128,7 +128,7 @@ export default function BottomBar() {
                 className="w-4 h-4"
               />
               <div className="text-right">
-                <div className="text-white font-medium text-xs"> {/* Smaller text */}
+                <div className="text-gray-800 font-medium text-xs"> {/* Smaller text */}
                   {isLoading ? '...' : bnbPrice ? formatPrice(bnbPrice.price) : 'N/A'}
                 </div>
                 {bnbPrice && (

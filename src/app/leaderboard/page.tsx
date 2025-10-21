@@ -7,7 +7,7 @@ import TokenImage from '@/components/TokenImage';
 import JumpingDots from '@/components/JumpingDots';
 import { PublicKey } from '@solana/web3.js';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChartBar, faCrown, faHouse } from '@fortawesome/free-solid-svg-icons';
+import { faChartBar, faCrown, faHouse, faEye } from '@fortawesome/free-solid-svg-icons';
 import Image from 'next/image';
 
 interface PortfolioStats {
@@ -523,8 +523,8 @@ export default function LeaderboardPage() {
               )}
             </div>
           </div>
-          <h1 className="text-3xl font-semibold mb-2">Weekly Portfolio Leaderboards</h1>
-          <p className="text-white/60">
+          <h1 className="text-3xl font-semibold mb-2 text-gray-800 drop-shadow-lg">Weekly Portfolio Leaderboards</h1>
+          <p className="text-gray-800/60 drop-shadow-md">
             Compete for pump.fun rewards! Most viewed portfolio wins 20% of weekly rewards.
           </p>
         </div>
@@ -563,7 +563,7 @@ export default function LeaderboardPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex gap-1 mb-8 bg-white/5 rounded-lg p-1">
+        <div className="flex gap-1 mb-8 glassmorphism p-1">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -571,7 +571,7 @@ export default function LeaderboardPage() {
               className={`flex-1 py-2 sm:py-3 px-2 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                 activeTab === tab.id
                   ? 'bg-[var(--brand-end)] text-white'
-                  : 'text-white/60 hover:text-white hover:bg-white/5'
+                  : 'text-gray-800/60 hover:text-gray-800 hover:bg-[#d7dadb]/60'
               }`}
             >
               <div className="text-center">
@@ -593,7 +593,7 @@ export default function LeaderboardPage() {
           <div className="space-y-6">
             {currentTab?.data && currentTab.data.length > 0 ? (
               currentTab.data.map((portfolio, index) => (
-                <div key={portfolio.id} className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-4 sm:p-6">
+                <div key={portfolio.id} className="glassmorphism p-4 sm:p-6">
                   {/* Portfolio Header */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                     <div className="flex items-center gap-3 sm:gap-4 flex-1">
@@ -619,20 +619,23 @@ export default function LeaderboardPage() {
                             </div>
                           )}
                         </Link>
-                        <h3 className="text-base sm:text-lg font-medium text-white truncate">{portfolio.name}</h3>
+                        <h3 className="text-base sm:text-lg font-medium text-gray-800 truncate">{portfolio.name}</h3>
                       </div>
                       
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-white/60">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-gray-800/60">
                         <Link 
                           href={`/${portfolio.username}`}
-                          className="truncate hover:text-white transition-colors cursor-pointer"
+                          className="truncate hover:text-gray-800 transition-colors cursor-pointer"
                         >
                           by {portfolio.username}
                         </Link>
                         {activeTab === 'mostShared' && (
                           <>
                             <span>{portfolio.shares} shares</span>
-                            <span>{portfolio.views} views</span>
+                            <span className="flex items-center gap-1">
+                              <FontAwesomeIcon icon={faEye} className="w-3 h-3" />
+                              {portfolio.views} views
+                            </span>
                           </>
                         )}
                         {activeTab === 'bestPerforming' && (
@@ -640,7 +643,7 @@ export default function LeaderboardPage() {
                             <span className={portfolio.avgChange >= 0 ? 'text-green-400' : 'text-red-400'}>
                               {portfolio.avgChange >= 0 ? '+' : ''}{portfolio.avgChange.toFixed(2)}%
                             </span>
-                            <span className="text-blue-400">
+                            <span className="text-[#f3ba2c]">
                               ${formatMarketCap(portfolio.avgMarketCap)} Avg MCap
                             </span>
                           </>
@@ -648,7 +651,7 @@ export default function LeaderboardPage() {
                         {activeTab === 'mostDiverse' && (
                           <>
                             <span>{portfolio.tokenCount} tokens</span>
-                            <span className="text-blue-400">
+                            <span className="text-[#f3ba2c]">
                               ${formatMarketCap(portfolio.avgMarketCap)} Avg MCap
                             </span>
                           </>
@@ -658,9 +661,9 @@ export default function LeaderboardPage() {
                     
                     <div className="flex items-center gap-3">
                       {index === 0 && activeTab === 'mostShared' && (
-                        <div className="flex items-center gap-1 text-yellow-400">
+                        <div className="flex items-center gap-1 bg-[#f3ba2c] px-3 py-2 rounded-lg">
                           <span className="text-white text-base sm:text-lg"><FontAwesomeIcon icon={faCrown} /></span>
-                          <span className="text-xs sm:text-sm font-medium">Weekly Leader</span>
+                          <span className="text-xs sm:text-sm font-medium text-white">Weekly Leader</span>
                         </div>
                       )}
                       <Link
@@ -674,9 +677,9 @@ export default function LeaderboardPage() {
                   
                   {/* Portfolio Tokens Preview */}
                   {portfolio.rows && portfolio.rows.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-white/10">
+                    <div className="mt-4 pt-4 border-t border-[#b8bdbf]">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                        <span className="text-xs sm:text-sm text-white/60">Portfolio:</span>
+                        <span className="text-xs sm:text-sm text-gray-800/60">Portfolio:</span>
                         <div className="flex flex-wrap items-center gap-2">
                           {portfolio.rows.slice(0, 3).map((row, tokenIndex) => {
                             const meta = tokenMeta[row.mint];
@@ -700,14 +703,14 @@ export default function LeaderboardPage() {
                                     ?
                                   </div>
                                 )}
-                                <span className="text-xs text-white/80">
+                                <span className="text-xs text-gray-800/80">
                                   {meta?.symbol || row.mint.slice(0, 4)}
                                 </span>
                               </div>
                             );
                           })}
                           {portfolio.rows.length > 3 && (
-                            <span className="text-xs text-white/60 ml-1">
+                            <span className="text-xs text-gray-800/60 ml-1">
                               +{portfolio.rows.length - 3} more
                             </span>
                           )}
@@ -720,8 +723,8 @@ export default function LeaderboardPage() {
             ) : (
               <div className="text-center py-16">
                 <div className="mb-8">
-                  <h2 className="text-2xl font-semibold text-white mb-4">No portfolios yet</h2>
-                  <p className="text-white/60 mb-8">
+                  <h2 className="text-2xl font-semibold text-gray-800 mb-4 drop-shadow-lg">No portfolios yet</h2>
+                  <p className="text-gray-800/60 mb-8 drop-shadow-md">
                     Be the first to create a portfolio and climb the leaderboard!
                   </p>
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
