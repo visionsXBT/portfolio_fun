@@ -1,31 +1,43 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 
-export default function PageTransition({ children }: { children: React.ReactNode }) {
+interface PageTransitionProps {
+  children: React.ReactNode;
+}
+
+export default function PageTransition({ children }: PageTransitionProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const [animationKey, setAnimationKey] = useState(0);
   const pathname = usePathname();
 
   useEffect(() => {
-    // Fade out
+    // Reset visibility when pathname changes
     setIsVisible(false);
+    setAnimationKey(prev => prev + 1);
     
-    // Fade in after a short delay
+    // Reduced delay for smoother transition
     const timer = setTimeout(() => {
       setIsVisible(true);
-    }, 100);
+    }, 50); // Reduced from 150ms to 50ms
 
     return () => clearTimeout(timer);
   }, [pathname]);
 
   return (
     <div 
-      className={`transition-opacity duration-300 ease-in-out ${
-        isVisible ? 'opacity-100' : 'opacity-0'
+      key={animationKey}
+      className={`transition-all duration-400 ease-out ${ // Reduced duration from 800ms to 400ms
+        isVisible 
+          ? 'opacity-100 translate-y-0' 
+          : 'opacity-0 translate-y-4' // Reduced translateY from 8 to 4
       }`}
+      style={{ willChange: 'opacity, transform' }} // Added will-change for better performance
     >
-      {children}
+      <div className="animate-fade-in-up">
+        {children}
+      </div>
     </div>
   );
 }

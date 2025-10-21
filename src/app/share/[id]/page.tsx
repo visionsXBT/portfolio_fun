@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
 import { PublicKey } from '@solana/web3.js';
 import Logo from '@/components/Logo';
 import TokenImage from '@/components/TokenImage';
@@ -214,7 +213,7 @@ export default function PublicPortfolioView() {
           const response = await fetch(pageUrl, {
             signal: AbortSignal.timeout(10000),
             headers: {
-              'User-Agent': 'Mozilla/5.0 (compatible; onPort/1.0)',
+              'User-Agent': 'Mozilla/5.0 (compatible; goPort/1.0)',
               'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             }
           });
@@ -643,7 +642,7 @@ export default function PublicPortfolioView() {
       <div className="min-h-screen p-6 sm:p-8 md:p-12 pb-16" style={{ fontFamily: 'Golos Text, sans-serif' }}>
         <div className="mx-auto w-full max-w-6xl">
           <div className="flex items-center justify-center h-64">
-            <div className="text-white text-xl">Loading portfolio...</div>
+            <div className="text-gray-800 text-xl">Loading portfolio...</div>
           </div>
         </div>
       </div>
@@ -656,8 +655,8 @@ export default function PublicPortfolioView() {
         <div className="mx-auto w-full max-w-6xl">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
-              <div className="text-white text-xl mb-4">Portfolio Not Found</div>
-              <div className="text-white/60">The portfolio you&apos;re looking for doesn&apos;t exist or has been removed.</div>
+              <div className="text-gray-800 text-xl mb-4">Portfolio Not Found</div>
+              <div className="text-gray-800/60">The portfolio you&apos;re looking for doesn&apos;t exist or has been removed.</div>
             </div>
           </div>
         </div>
@@ -674,12 +673,12 @@ export default function PublicPortfolioView() {
             <Logo />
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
-                <span className="text-sm text-white/60">
+                <span className="text-sm text-gray-800/60">
                   Shared Portfolio • Read Only
                 </span>
                 <button
                   onClick={() => trackPortfolioAction('share')}
-                  className="text-white/60 hover:text-white transition-colors"
+                  className="text-gray-800/60 hover:text-gray-800 transition-colors"
                   title="Share this portfolio"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -692,7 +691,7 @@ export default function PublicPortfolioView() {
               {currentUserSession ? (
                 <button 
                   onClick={() => window.location.href = '/profile'}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 text-white text-sm transition-colors"
+                  className="flex items-center gap-2 glassmorphism px-3 py-2 text-gray-800 text-sm transition-colors"
                 >
                   {currentUserSession.profilePicture ? (
                     <Image
@@ -713,14 +712,14 @@ export default function PublicPortfolioView() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setShowSignInModal(true)}
-                    className="text-sm text-white/60 hover:text-white transition-colors"
+                    className="text-sm text-gray-800/60 hover:text-gray-800 transition-colors"
                   >
                     Sign In
                   </button>
-                  <span className="text-white/40">•</span>
+                  <span className="text-gray-800/40">•</span>
                   <button
                     onClick={() => setShowAccountModal(true)}
-                    className="text-sm text-white/60 hover:text-white transition-colors"
+                    className="text-sm text-gray-800/60 hover:text-gray-800 transition-colors"
                   >
                     Sign Up
                   </button>
@@ -742,13 +741,13 @@ export default function PublicPortfolioView() {
                 />
               </div>
             )}
-            <h1 className="text-3xl font-semibold">
+            <h1 className="text-3xl font-semibold text-gray-800 drop-shadow-lg">
               {portfolios.length > 0 && portfolios[0].username 
                 ? `${portfolios[0].username}'s Portfolio` 
                 : "Shared Portfolio"}
             </h1>
           </div>
-          <p className="text-white/60">
+          <p className="text-gray-800/60 drop-shadow-md">
             Viewing a shared portfolio. Sign in to create and edit your own portfolios.
           </p>
         </div>
@@ -756,21 +755,21 @@ export default function PublicPortfolioView() {
         {/* Portfolio List - Read Only Version */}
         {portfolios.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-white/60 text-lg mb-4">No portfolios to display</div>
+            <div className="text-gray-800/60 text-lg mb-4">No portfolios to display</div>
           </div>
         ) : (
           portfolios.map((portfolio, portfolioIndex) => {
             const stats = portfolioStats[portfolioIndex];
             return (
-              <div key={portfolio.id} className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6 mb-6">
+              <div key={portfolio.id} className="glassmorphism p-6 mb-6">
                 {/* Portfolio Header */}
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-4 flex-1">
                     <div className="flex items-center gap-3">
-                      <span className="text-white/60 text-lg">📊</span>
+                      <span className="text-gray-800/60 text-lg">📊</span>
                       <div>
-                        <h2 className="text-xl font-semibold text-white">{portfolio.name}</h2>
-                        <div className="text-sm text-white/60">
+                        <h2 className="text-xl font-semibold text-gray-800">{portfolio.name}</h2>
+                        <div className="text-sm text-gray-800/60">
                           {portfolio.rows.length} token{portfolio.rows.length !== 1 ? 's' : ''}
                           {stats && (
                             <>
@@ -779,7 +778,7 @@ export default function PublicPortfolioView() {
                                 {stats.avgChange >= 0 ? '+' : ''}{stats.avgChange.toFixed(2)}%
                               </span>
                               {' • '}
-                              <span className="text-blue-400">
+                              <span className="text-[#f3ba2c]">
                                 {formatMarketCap(stats.avgMarketCap)} Avg MCap
                               </span>
                             </>
@@ -793,7 +792,7 @@ export default function PublicPortfolioView() {
                 {/* Token List - Always Expanded for Shared View */}
                 <div className="space-y-3">
                   {portfolio.rows.length === 0 ? (
-                    <div className="text-center py-8 text-white/60">
+                    <div className="text-center py-8 text-gray-800/60">
                       No tokens in this portfolio
                     </div>
                   ) : (
@@ -810,7 +809,7 @@ export default function PublicPortfolioView() {
                       console.log('🎨 Rendering TokenImage for', row.mint, 'with meta:', meta);
                       console.log('🎨 TokenMeta logoURI:', tokenMetaData.logoURI, 'ExtraMeta logoURI:', extraMetaData.logoURI, 'Final logoURI:', meta.logoURI);
                       return (
-                        <div key={row.mint} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                        <div key={row.mint} className="flex items-center justify-between glassmorphism p-3">
                           <div className="flex items-center gap-3">
                             <TokenImage
                               src={meta?.logoURI || undefined}
@@ -819,16 +818,16 @@ export default function PublicPortfolioView() {
                               fallbackSrc="/placeholder-token.svg?v=2"
                             />
                             <div>
-                              <div className="font-medium text-white">
+                              <div className="font-medium text-gray-800">
                                 {meta?.symbol || 'Unknown'}
                               </div>
                               <div className="flex items-center gap-2">
-                                <div className="text-sm text-white/60">
+                                <div className="text-sm text-gray-800/60">
                                   {meta?.name || row.mint.slice(0, 8) + '...'}
                                 </div>
                                 <button
                                   onClick={() => handleCopyContractAddress(row.mint)}
-                                  className="text-white/40 hover:text-white/60 transition-colors flex-shrink-0"
+                                  className="text-gray-800/40 hover:text-gray-800/60 transition-colors flex-shrink-0"
                                   title="Copy contract address"
                                 >
                                   <FontAwesomeIcon icon={faCopy} className="w-3 h-3" />
@@ -842,7 +841,7 @@ export default function PublicPortfolioView() {
                           
                           <div className="text-right">
                             {meta?.marketCap && (
-                              <div className="text-blue-400 font-semibold text-sm">
+                              <div className="text-[#f3ba2c] font-semibold text-sm">
                                 {formatMarketCap(meta.marketCap)}
                               </div>
                             )}
@@ -864,8 +863,8 @@ export default function PublicPortfolioView() {
 
         {/* Footer */}
         <div className="text-center mt-8">
-          <div className="text-white/60 text-sm">
-            Portfolio shared via <span className="text-white font-semibold">onPort</span>
+          <div className="text-gray-800/60 text-sm">
+            Portfolio shared via <span className="text-gray-800 font-semibold">goPort</span>
           </div>
         </div>
       </div>

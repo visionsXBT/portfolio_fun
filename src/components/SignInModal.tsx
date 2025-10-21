@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useWallets, usePrivy, useLogin, useLogout, useLoginWithSiws } from '@privy-io/react-auth';
+import { useWallets, usePrivy, useLogin, useLoginWithSiws } from '@privy-io/react-auth';
 import { useWallets as useSolanaWallets } from '@privy-io/react-auth/solana';
 import JumpingDots from './JumpingDots';
 
@@ -13,7 +13,7 @@ declare global {
       publicKey?: {
         toString: () => string;
       };
-      connect?: () => Promise<any>;
+      connect?: () => Promise<{ publicKey: { toString: () => string } }>;
       signMessage?: (message: Uint8Array) => Promise<{ signature: Uint8Array }>;
     };
   }
@@ -36,9 +36,8 @@ export default function SignInModal({ isOpen, onClose, onSuccess, onSwitchToSign
   // Privy hooks
   const { wallets } = useWallets();
   const { wallets: solanaWallets } = useSolanaWallets();
-  const { authenticated, user, getAccessToken, connectOrCreateWallet, connectWallet } = usePrivy();
+  const { authenticated, user, getAccessToken, connectWallet } = usePrivy();
   const { login } = useLogin();
-  const { logout } = useLogout();
   const { generateSiwsMessage, loginWithSiws } = useLoginWithSiws();
 
   // Handle wallet authentication with our database
@@ -181,9 +180,9 @@ export default function SignInModal({ isOpen, onClose, onSuccess, onSwitchToSign
       
       // Login with the signed message using Privy
       await loginWithSiws({ 
-        message: encodedMessage, 
-        signature: results.signature
-      } as any);
+        message: message, // Use the original string message, not encodedMessage
+        signature: Array.from(results.signature).map(byte => byte.toString(16).padStart(2, '0')).join('')
+      });
     } catch (error) {
       console.error('Wallet login error:', error);
       setError("Wallet login failed. Please try again.");

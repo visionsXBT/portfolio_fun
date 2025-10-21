@@ -18,7 +18,7 @@ import JumpingDots from "@/components/JumpingDots";
 import ShareModal from "@/components/ShareModal";
 import ProfilePictureUpload from "@/components/ProfilePictureUpload";
 import UserSearchBar from "@/components/UserSearchBar";
-import { useLogout, useWallets, usePrivy } from '@privy-io/react-auth';
+import { useLogout, useWallets } from '@privy-io/react-auth';
 
 type PortfolioRow = {
   mint: string;
@@ -904,7 +904,7 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
           const response = await fetch(pageUrl, {
             signal: AbortSignal.timeout(10000),
             headers: {
-              'User-Agent': 'Mozilla/5.0 (compatible; onPort/1.0)',
+              'User-Agent': 'Mozilla/5.0 (compatible; goPort/1.0)',
               'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             }
           });

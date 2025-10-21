@@ -74,10 +74,11 @@ export async function POST(request: NextRequest) {
         });
 
         return response;
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         return NextResponse.json({ 
           success: false, 
-          error: error.message 
+          error: errorMessage 
         }, { status: 400 });
       }
     }
@@ -125,7 +126,8 @@ export async function POST(request: NextRequest) {
         });
 
         return response;
-      } catch (error: any) {
+      } catch (error: unknown) {
+        console.error('Signin error:', error);
         return NextResponse.json({ 
           success: false, 
           error: 'Invalid username or password' 

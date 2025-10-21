@@ -24,8 +24,8 @@ const golosText = Golos_Text({
 });
 
 export const metadata: Metadata = {
-  title: "onPort — Build your bags and shill it to the world!",
-  description: "Build bags with onPort, from Solana to BNB. The world is waiting for you to shill your bags",
+  title: "goPort — Make your bags go places.",
+  description: "Build bags with goPort, from Solana to BNB. Make your bags go places and share them with the world",
   icons: {
     icon: [
       { url: "/favicon.png", type: "image/png" },

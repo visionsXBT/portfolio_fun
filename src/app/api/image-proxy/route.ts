@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const response = await fetch(imageUrl, {
       headers: {
         // Add any necessary headers for the upstream request
-        'User-Agent': 'Mozilla/5.0 (compatible; onPort/1.0)',
+        'User-Agent': 'Mozilla/5.0 (compatible; goPort/1.0)',
         'Accept': 'image/*',
         'Referer': 'https://pump.fun/', // Some services require referer
       },

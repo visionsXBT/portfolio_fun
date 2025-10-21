@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     
     const response = await fetch(coinGeckoUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; onPort/1.0)',
+        'User-Agent': 'Mozilla/5.0 (compatible; goPort/1.0)',
         'Accept': 'application/json',
       },
       cache: 'no-cache',

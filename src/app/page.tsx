@@ -66,7 +66,7 @@ export default function Home() {
   return (
     <div className="h-screen flex flex-col items-center justify-center overflow-hidden">
       {/* Header with Logo and FAQs */}
-      <div className="absolute top-0 left-0 right-0 p-3 sm:p-6 md:p-8 z-10 flex items-center justify-between">
+      <div className="absolute top-0 left-0 right-0 p-3 sm:p-6 md:p-8 z-10 flex items-center justify-between animate-fade-in animate-delay-100">
         <Logo size="large" />
         <button 
           onClick={() => setShowFAQModal(true)}
@@ -79,13 +79,13 @@ export default function Home() {
       {/* Hero section */}
       <section className="flex-1 flex flex-col items-center justify-center px-4 sm:px-8 md:px-12 lg:px-16 xl:px-20 py-4 sm:py-8 md:py-12 lg:py-16 xl:py-20 w-full max-w-7xl mx-auto">
         <div className="w-full text-center flex flex-col items-center justify-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#eaeaea] bg-white/20 backdrop-blur-md px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm md:text-base mb-4 sm:mb-6 md:mb-8 shadow-md shadow-gray-800/20">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#eaeaea] bg-white/20 backdrop-blur-md px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm md:text-base mb-4 sm:mb-6 md:mb-8 shadow-md shadow-gray-800/20 animate-fade-in-up animate-delay-200">
             <span className="inline-block h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-green-500 led-pulse" />
             Build portfolios of any kind with goPort
           </div>
           
           {/* Hero Image */}
-          <div className="mb-8 md:mb-12 flex justify-center w-full">
+          <div className="mb-8 md:mb-12 flex justify-center w-full animate-scale-in animate-delay-300">
             <div className="w-full max-w-6xl">
               <Image
                 src="/header_text.png"
@@ -98,7 +98,7 @@ export default function Home() {
             </div>
           </div>
           
-          <div className="flex flex-col items-center justify-center gap-4 md:gap-6 w-full max-w-md">
+          <div className="flex flex-col items-center justify-center gap-4 md:gap-6 w-full max-w-md animate-fade-in-up animate-delay-400">
             <div className="flex flex-col sm:flex-row items-center gap-3 md:gap-4 w-full">
               <button 
                 onClick={() => setShowSignInModal(true)}
@@ -179,12 +179,12 @@ export default function Home() {
               </button>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-6 animate-fade-in-up animate-delay-100">
               {/* FAQ 1 */}
               <div>
-                <h3 className="text-lg font-semibold text-white mb-2" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>What is onPort?</h3>
+                <h3 className="text-lg font-semibold text-white mb-2" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>What is goPort?</h3>
                 <p className="text-white/80" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}>
-                  onPort is a platform that allows you to build and share cryptocurrency portfolios in a fun, visual way. 
+                  goPort is a platform that allows you to build and share cryptocurrency portfolios in a fun, visual way. 
                   You can create portfolios of tokens from different chains (Solana, BNB Smart Chain) and share them with others.
                 </p>
               </div>
@@ -194,7 +194,7 @@ export default function Home() {
                 <h3 className="text-lg font-semibold text-white mb-2" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>How do I create a portfolio?</h3>
                 <p className="text-white/80" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}>
                   Simply sign up for an account, then paste token contract addresses into your portfolio. 
-                  onPort will automatically fetch token metadata, prices, and images to display your portfolio beautifully.
+                  goPort will automatically fetch token metadata, prices, and images to display your portfolio beautifully.
                 </p>
               </div>
 
@@ -202,7 +202,7 @@ export default function Home() {
               <div>
                 <h3 className="text-lg font-semibold text-white mb-2" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>Which blockchains are supported?</h3>
                 <p className="text-white/80" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}>
-                  Currently, onPort supports Solana and BNB Smart Chain tokens. You can mix tokens from both chains in the same portfolio.
+                  Currently, goPort supports Solana and BNB Smart Chain tokens. You can mix tokens from both chains in the same portfolio.
                 </p>
               </div>
 
@@ -244,7 +244,7 @@ export default function Home() {
 
               {/* FAQ 8 */}
               <div>
-                <h3 className="text-lg font-semibold text-white mb-2" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>Is onPort free to use?</h3>
+                <h3 className="text-lg font-semibold text-white mb-2" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>Is goPort free to use?</h3>
                 <p className="text-white/80" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}>
                   Yes! Creating accounts, building portfolios, and sharing them is completely free. We believe in making portfolio 
                   management accessible to everyone in the crypto community.

@@ -13,7 +13,7 @@ export default function Logo({ size = "default" }: LogoProps) {
       <div className={`${logoSize} relative rounded-lg flex items-center justify-center`}>
         <Image
           src="/logo.png"
-          alt="onPort Logo"
+          alt="goPort Logo"
           width={400}
           height={156}
           className="object-contain"

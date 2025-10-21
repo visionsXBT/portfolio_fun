@@ -3,11 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrophy, faUser, faCog, faSignOutAlt, faBars, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { useLogout, useWallets } from '@privy-io/react-auth';
-import { Just_Another_Hand } from 'next/font/google';
 
 interface NavigationBarProps {
   username: string;
@@ -18,7 +16,6 @@ interface NavigationBarProps {
 
 export default function NavigationBar({ username, profilePicture, isCurrentUser = false, displayName }: NavigationBarProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const router = useRouter();
   const { logout } = useLogout();
   const { wallets } = useWallets();
 
@@ -115,7 +112,7 @@ export default function NavigationBar({ username, profilePicture, isCurrentUser 
       {/* Navigation Bar */}
       <div className={`
         fixed left-0 top-0 h-screen w-80 bg-white/5 backdrop-blur-md glassmorphism border-r border-white/10 z-40
-        transform transition-transform duration-300 ease-in-out
+        transform transition-transform duration-300 ease-in-out animate-slide-in-left animate-delay-100
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 lg:static lg:h-auto lg:w-64 lg:bg-transparent lg:backdrop-blur-none
       `}>
@@ -125,7 +122,7 @@ export default function NavigationBar({ username, profilePicture, isCurrentUser 
             <Link href="/" className="w-40 h-20 hover:opacity-80 transition-opacity">
               <Image
                 src="/logo.png"
-                alt="onPort Logo"
+                alt="goPort Logo"
                 width={160}
                 height={80}
                 className="w-full h-full object-contain"

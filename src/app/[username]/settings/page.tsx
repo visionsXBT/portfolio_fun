@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrophy, faUser, faCog, faSignOutAlt, faBars, faTimes, faSave, faEye, faEyeSlash, faWallet } from '@fortawesome/free-solid-svg-icons';
-import { useLogout, useWallets, useLogin, useConnectWallet, usePrivy } from '@privy-io/react-auth';
+import { useLogout, useWallets, useLogin, usePrivy } from '@privy-io/react-auth';
 import UserSearchBar from '@/components/UserSearchBar';
 import SignInModal from '@/components/SignInModal';
 import AccountModal from '@/components/AccountModal';
@@ -29,7 +29,7 @@ export default function SettingsPage() {
   const { logout } = useLogout();
   const { wallets } = useWallets();
   const { login } = useLogin();
-  const { authenticated, user, getAccessToken, connectOrCreateWallet, connectWallet } = usePrivy();
+  const { authenticated, user, getAccessToken, connectWallet } = usePrivy();
   const username = params.username as string;
   
   const [currentUserSession, setCurrentUserSession] = useState<UserSession | null>(null);
@@ -343,14 +343,14 @@ export default function SettingsPage() {
         transform transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 lg:static lg:h-auto lg:w-64 lg:bg-transparent lg:backdrop-blur-none lg:border-r-0
-      `} style={{ borderRight: '3px solid rgba(107, 114, 128, 0.5)' }}>
+      `} style={{ borderRight: '1px solid rgba(107, 114, 128, 0.5)' }}>
         <div className="flex flex-col h-screen p-2 pb-16 pt-16 lg:pt-2">
           {/* Logo Section */}
           <div className="flex flex-col items-start gap-2 mb-6">
             <Link href="/" className="w-40 h-20 hover:opacity-80 transition-opacity">
               <Image
                 src="/logo.png"
-                alt="onPort Logo"
+                alt="goPort Logo"
                 width={160}
                 height={80}
                 className="w-full h-full object-contain"
