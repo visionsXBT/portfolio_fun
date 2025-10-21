@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrophy, faUser, faCog, faSignOutAlt, faBars, faTimes } from '@fortawesome/free-solid-svg-icons';
-import { useLogout, useWallets } from '@privy-io/react-auth';
+import { useSafeLogout, useSafeWallets } from '@/hooks/usePrivySafe';
 
 interface NavigationBarProps {
   username: string;
@@ -16,8 +16,8 @@ interface NavigationBarProps {
 
 export default function NavigationBar({ username, profilePicture, isCurrentUser = false, displayName }: NavigationBarProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const { logout } = useLogout();
-  const { wallets } = useWallets();
+  const { logout } = useSafeLogout();
+  const { wallets } = useSafeWallets();
 
   const handleLogout = async () => {
     console.log('🔴 Starting logout process...');
@@ -63,8 +63,10 @@ export default function NavigationBar({ username, profilePicture, isCurrentUser 
     // Logout from Privy
     try {
       console.log('🔴 Logging out from Privy...');
-      await logout();
-      console.log('✅ Logged out from Privy');
+      if (logout) {
+        await logout();
+        console.log('✅ Logged out from Privy');
+      }
     } catch (error) {
       console.error('❌ Error logging out from Privy:', error);
     }

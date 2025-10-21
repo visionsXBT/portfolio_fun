@@ -3,11 +3,18 @@
 import { PrivyProvider as PrivyProviderBase } from '@privy-io/react-auth';
 
 export default function PrivyProvider({ children }: { children: React.ReactNode }) {
-  // console.log('Privy App ID:', process.env.NEXT_PUBLIC_PRIVY_APP_ID);
+  const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
+  
+  // If no app ID is provided, return children without Privy provider
+  // This allows the app to build and run without Privy functionality
+  if (!appId) {
+    console.warn('NEXT_PUBLIC_PRIVY_APP_ID not found. Privy authentication will be disabled.');
+    return <>{children}</>;
+  }
   
   return (
     <PrivyProviderBase
-      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}
+      appId={appId}
       config={{
         // Configure supported login methods - wallet only
         loginMethods: ['wallet'],

@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useWallets, usePrivy, useLogin, useLoginWithSiws } from '@privy-io/react-auth';
-import { useWallets as useSolanaWallets } from '@privy-io/react-auth/solana';
+import { useSafeWallets, useSafeSolanaWallets, useSafePrivy, useSafeLogin, useSafeLoginWithSiws } from '@/hooks/usePrivySafe';
 import JumpingDots from './JumpingDots';
 
 // TypeScript declaration for Phantom wallet
@@ -33,15 +32,20 @@ export default function SignInModal({ isOpen, onClose, onSuccess, onSwitchToSign
   const [isLoading, setIsLoading] = useState(false);
   const [isWalletLoading, setIsWalletLoading] = useState(false);
 
-  // Privy hooks
-  const { wallets } = useWallets();
-  const { wallets: solanaWallets } = useSolanaWallets();
-  const { authenticated, user, getAccessToken, connectWallet } = usePrivy();
-  const { login } = useLogin();
-  const { generateSiwsMessage, loginWithSiws } = useLoginWithSiws();
+  // Privy hooks - using safe wrappers
+  const { wallets } = useSafeWallets();
+  const { wallets: solanaWallets } = useSafeSolanaWallets();
+  const { authenticated, user, getAccessToken, connectWallet } = useSafePrivy();
+  const { login } = useSafeLogin();
+  const { generateSiwsMessage, loginWithSiws } = useSafeLoginWithSiws();
 
   // Handle wallet authentication with our database
   const handleWalletAuthentication = useCallback(async () => {
+    // DISABLED: Wallet authentication is not working
+    setError("Wallet authentication is currently disabled. Please use username/password authentication.");
+    return;
+    
+    /*
     if (!user) {
       return;
     }
@@ -111,6 +115,7 @@ export default function SignInModal({ isOpen, onClose, onSuccess, onSwitchToSign
     } catch (error) {
       setError("Wallet authentication failed. Please try again.");
     }
+    */
   }, [wallets, user, onSuccess, onClose, getAccessToken]);
 
   // Handle authentication state changes - simplified approach
@@ -129,6 +134,11 @@ export default function SignInModal({ isOpen, onClose, onSuccess, onSwitchToSign
 
   // Handle wallet connection - split approach for proper popup
   const handleWalletConnect = async () => {
+    // DISABLED: Wallet authentication is not working
+    setError("Wallet connection is currently disabled. Please use username/password authentication.");
+    return;
+    
+    /*
     setIsWalletLoading(true);
     setError("");
 
@@ -154,10 +164,16 @@ export default function SignInModal({ isOpen, onClose, onSuccess, onSwitchToSign
       setError("Wallet connection failed. Please try again.");
       setIsWalletLoading(false);
     }
+    */
   };
 
   // Handle wallet login with signature - using Privy's authentication
   const handleWalletLogin = async () => {
+    // DISABLED: Wallet authentication is not working
+    setError("Wallet authentication is currently disabled. Please use username/password authentication.");
+    return;
+    
+    /*
     if (!solanaWallets || solanaWallets.length === 0) {
       setError("Please connect a wallet first");
       return;
@@ -188,6 +204,7 @@ export default function SignInModal({ isOpen, onClose, onSuccess, onSwitchToSign
       setError("Wallet login failed. Please try again.");
       setIsWalletLoading(false);
     }
+    */
   };
 
   // Handle keyboard shortcuts
@@ -317,64 +334,39 @@ export default function SignInModal({ isOpen, onClose, onSuccess, onSwitchToSign
           </div>
         </form>
 
-        {/* Wallet Connection Section */}
-        <div className="mt-6 pt-6 border-t border-white/20">
-          <div className="text-center mb-4">
-            <p className="text-sm text-white/60">Or connect with your wallet</p>
-            {!isPhantomInstalled() && (
-              <p className="text-xs text-yellow-400 mt-1">
-                <a 
-                  href="https://phantom.app/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="underline hover:text-yellow-300"
-                >
-                  Install Phantom Wallet
-                </a>
-              </p>
-            )}
+        {/* Wallet Connection Section - DISABLED */}
+        {false && (
+          <div className="mt-6 pt-6 border-t border-white/20">
+            <div className="text-center mb-4">
+              <p className="text-sm text-white/60">Or connect with your wallet</p>
+              {!isPhantomInstalled() && (
+                <p className="text-xs text-yellow-400 mt-1">
+                  <a 
+                    href="https://phantom.app/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="underline hover:text-yellow-300"
+                  >
+                    Install Phantom Wallet
+                  </a>
+                </p>
+              )}
+            </div>
+            
+            <button
+              disabled
+              className="w-full rounded-md border border-white/20 bg-white/5 text-white/50 px-4 py-2 text-sm transition-colors flex items-center justify-center gap-2 cursor-not-allowed"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M21 7h-3V6a3 3 0 0 0-3-3H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1h3a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1zM5 4h10a1 1 0 0 1 1 1v1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zm11 14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8h12v10z"/>
+              </svg>
+              Wallet Connection (Disabled)
+            </button>
+            <div className="text-center mt-2">
+              <p className="text-xs text-white/40">Wallet authentication is currently disabled</p>
+            </div>
           </div>
-          
-          {!solanaWallets || solanaWallets.length === 0 ? (
-            <button
-              onClick={handleWalletConnect}
-              disabled={isWalletLoading}
-              className="w-full rounded-md border border-white/20 bg-white/5 text-white px-4 py-2 text-sm hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
-            >
-              {isWalletLoading ? (
-                <div className="flex items-center justify-center">
-                  <JumpingDots className="text-white" />
-                </div>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M21 7h-3V6a3 3 0 0 0-3-3H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1h3a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1zM5 4h10a1 1 0 0 1 1 1v1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zm11 14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8h12v10z"/>
-                  </svg>
-                  {isPhantomInstalled() ? 'Connect Wallet' : 'Install Phantom First'}
-                </>
-              )}
-            </button>
-          ) : (
-            <button
-              onClick={handleWalletLogin}
-              disabled={isWalletLoading}
-              className="w-full rounded-md border border-white/20 bg-white/5 text-white px-4 py-2 text-sm hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
-            >
-              {isWalletLoading ? (
-                <div className="flex items-center justify-center">
-                  <JumpingDots className="text-white" />
-                </div>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M21 7h-3V6a3 3 0 0 0-3-3H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1h3a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1zM5 4h10a1 1 0 0 1 1 1v1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zm11 14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8h12v10z"/>
-                  </svg>
-                  Sign & Login
-                </>
-              )}
-            </button>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrophy, faUser, faCog, faSignOutAlt, faBars, faTimes, faSave, faEye, faEyeSlash, faWallet } from '@fortawesome/free-solid-svg-icons';
-import { useLogout, useWallets, useLogin, usePrivy } from '@privy-io/react-auth';
+import { useSafeLogout, useSafeWallets, useSafeLogin, useSafePrivy } from '@/hooks/usePrivySafe';
 import UserSearchBar from '@/components/UserSearchBar';
 import SignInModal from '@/components/SignInModal';
 import AccountModal from '@/components/AccountModal';
@@ -26,10 +26,10 @@ interface UserSession {
 export default function SettingsPage() {
   const params = useParams();
   const router = useRouter();
-  const { logout } = useLogout();
-  const { wallets } = useWallets();
-  const { login } = useLogin();
-  const { authenticated, user, getAccessToken, connectWallet } = usePrivy();
+  const { logout } = useSafeLogout();
+  const { wallets } = useSafeWallets();
+  const { login } = useSafeLogin();
+  const { authenticated, user, getAccessToken, connectWallet } = useSafePrivy();
   const username = params.username as string;
   
   const [currentUserSession, setCurrentUserSession] = useState<UserSession | null>(null);
@@ -133,8 +133,10 @@ export default function SettingsPage() {
     // Logout from Privy
     try {
       console.log('🔴 Logging out from Privy...');
-      await logout();
-      console.log('✅ Logged out from Privy');
+      if (logout) {
+        await logout();
+        console.log('✅ Logged out from Privy');
+      }
     } catch (error) {
       console.error('❌ Error logging out from Privy:', error);
     }
@@ -208,6 +210,11 @@ export default function SettingsPage() {
   };
 
   const handleWalletConnection = async () => {
+    // DISABLED: Wallet authentication is not working
+    setWalletMessage('Wallet connection is currently disabled. Please use username/password authentication.');
+    return;
+    
+    /*
     // setIsConnectingWallet(true);
     setWalletMessage('');
     
@@ -256,6 +263,7 @@ export default function SettingsPage() {
     } finally {
       // setIsConnectingWallet(false);
     }
+    */
   };
 
   const handleDisplayNameChange = async (e: React.FormEvent) => {
@@ -564,8 +572,8 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* Wallet Connection (Email Users Only) */}
-            {currentUserSession.accountType === 'email' && (
+            {/* Wallet Connection (Email Users Only) - DISABLED */}
+            {false && currentUserSession?.accountType === 'email' && (
               <div className="glassmorphism p-6">
                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Connect Wallet</h2>
                 <p className="text-gray-800/60 text-sm mb-4">
@@ -574,15 +582,14 @@ export default function SettingsPage() {
                 <button
                   onClick={handleWalletConnection}
                   className="flex items-center gap-2 rounded-md bg-[#d7dadb]/60 text-gray-800 px-4 py-2 text-sm hover:bg-[#d7dadb]/80 transition-colors border border-[#b8bdbf]"
+                  disabled
                 >
                   <FontAwesomeIcon icon={faWallet} />
-                  Connect Wallet
+                  Connect Wallet (Disabled)
                 </button>
-                {walletMessage && (
-                  <div className={`text-sm mt-2 ${walletMessage.includes('successfully') ? 'text-green-400' : 'text-red-400'}`}>
-                    {walletMessage}
-                  </div>
-                )}
+                <div className="text-sm mt-2 text-gray-800/60">
+                  Wallet connection is currently disabled.
+                </div>
               </div>
             )}
 

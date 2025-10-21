@@ -18,7 +18,7 @@ import JumpingDots from "@/components/JumpingDots";
 import ShareModal from "@/components/ShareModal";
 import ProfilePictureUpload from "@/components/ProfilePictureUpload";
 import UserSearchBar from "@/components/UserSearchBar";
-import { useLogout, useWallets } from '@privy-io/react-auth';
+import { useSafeLogout, useSafeWallets } from '@/hooks/usePrivySafe';
 
 type PortfolioRow = {
   mint: string;
@@ -149,8 +149,8 @@ export default function BuilderPageContent({ username }: BuilderPageContentProps
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { logout } = useLogout();
-  const { wallets } = useWallets();
+  const { logout } = useSafeLogout();
+  const { wallets } = useSafeWallets();
   // const { authenticated } = usePrivy(); // COMMENTED OUT (causing issues)
 
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
