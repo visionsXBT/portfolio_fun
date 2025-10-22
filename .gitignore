@@ -39,3 +39,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Remotion
+/out/
+*.mp4
+*.mov
+*.avi
+*.webm
+*.mkv
+remotion.config.ts
+src/Root.tsx
+src/index.ts
+src/videos/

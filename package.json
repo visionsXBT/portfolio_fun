@@ -6,7 +6,10 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "remotion": "remotion preview src/index.ts",
+    "remotion:render": "remotion render src/index.ts",
+    "remotion:studio": "remotion studio src/index.ts"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.1.0",
@@ -14,6 +17,11 @@
     "@fortawesome/react-fontawesome": "^3.1.0",
     "@privy-io/react-auth": "^3.3.0",
     "@privy-io/wagmi": "^2.0.1",
+    "@remotion/bundler": "^4.0.364",
+    "@remotion/cli": "^4.0.364",
+    "@remotion/lambda": "^4.0.364",
+    "@remotion/player": "^4.0.364",
+    "@remotion/renderer": "^4.0.364",
     "@scure/base": "^2.0.0",
     "@solana-program/memo": "^0.8.0",
     "@solana-program/system": "^0.8.1",
@@ -28,6 +36,7 @@
     "next": "15.5.5",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "remotion": "^4.0.364",
     "zod": "^4.1.12"
   },
   "devDependencies": {
