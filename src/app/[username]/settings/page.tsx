@@ -364,8 +364,8 @@ export default function SettingsPage() {
                 className="w-full h-full object-contain"
               />
             </Link>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full border border-[#b8bdbf] overflow-hidden">
+            <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-[#b8bdbf] text-gray-800 drop-shadow-md w-full">
+              <div className="w-12 h-12 rounded-full border border-white/20 overflow-hidden flex-shrink-0">
                 {currentUserSession.profilePicture ? (
                   <Image
                     src={currentUserSession.profilePicture}
@@ -381,7 +381,7 @@ export default function SettingsPage() {
                 )}
               </div>
               <div className="text-left">
-                <div className="text-gray-800 font-medium text-lg">
+                <div className="text-gray-800 font-medium">
                   {currentUserSession.displayName || currentUserSession.username}
                 </div>
                 <div className="text-gray-800/60 text-sm">

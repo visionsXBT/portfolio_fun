@@ -162,7 +162,7 @@ export default function UserSearchBar({ className = "" }: UserSearchBarProps) {
               setIsOpen(true);
             }
           }}
-          className="w-full rounded-md border border-[#b8bdbf] bg-[#d7dadb]/60 text-gray-800 pl-10 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
+           className="w-full rounded-md border border-[#b8bdbf] bg-[#d7dadb]/60 g text-gray-800 pl-10 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-end)]"
         />
         
         {/* Search Icon */}
@@ -180,7 +180,11 @@ export default function UserSearchBar({ className = "" }: UserSearchBarProps) {
 
       {/* Search Results Dropdown */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 z-50 max-h-80 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-2 z-50 max-h-80 overflow-y-auto drop-shadow-lg rounded-md" style={{
+          background: 'rgba(224, 224, 224, 0.83)',
+          backdropFilter: 'blur(2px)',
+          border: '1px solid rgba(255, 255, 255, 0.2)'
+        }}>
           {isLoading ? (
             <div className="glassmorphism p-4">
               <div className="flex items-center justify-center gap-2 text-gray-600">

@@ -954,7 +954,7 @@ export default function UsernamePage() {
                       )}
                     </div>
                   </div>
-          <h1 className="text-2xl font-semibold mb-1 drop-shadow-lg">
+          <h1 className="text-4xl font-semibold mb-1 drop-shadow-lg">
             {currentUserSession && currentUserSession.username === username ? 'My Portfolios' : `${username}'s Portfolios`}
           </h1>
           <p className="text-gray-800/60 text-sm drop-shadow-md">
